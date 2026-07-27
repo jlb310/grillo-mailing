@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    volumes:
+      # Persist SQLite database (if using SQLite)
+      - ./prisma:/app/prisma
+    restart: unless-stopped
+
+  # Optional: Add a cron service for scheduled campaigns
+  # cron:
+  #   image: alpine/curl
+  #   command: >
+  #     sh -c "echo '* * * * * curl -s $$NEXTAUTH_URL/api/campaigns/scheduled/send' | crontab - && crond -f"
+  #   environment:
+  #     - NEXTAUTH_URL=${NEXTAUTH_URL}
+  #   depends_on:
+  #     - app
