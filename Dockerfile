@@ -32,6 +32,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Install necessary tools for SQLite and scripts
+RUN apk add --no-cache curl
+
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -41,13 +44,17 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/scripts ./scripts
 
-# For SQLite, we need write permissions for the database directory
-RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
+# Make entrypoint executable and ensure DB directory exists
+RUN chmod +x /app/scripts/entrypoint.sh
+RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma /app/scripts
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Use entrypoint script to run migrations + seed + start
+CMD ["sh", "/app/scripts/entrypoint.sh"]

@@ -9,21 +9,26 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-file:./prisma/dev.db}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
     volumes:
-      # Persist SQLite database (if using SQLite)
-      - ./prisma:/app/prisma
+      # 🔴 IMPORTANTE: Este volumen hace que SQLite persista entre reinicios
+      - grillo-db:/app/prisma
     restart: unless-stopped
 
-  # Optional: Add a cron service for scheduled campaigns
+  # Optional: Cron service for scheduled campaigns
+  # Uncomment if you want automatic scheduling inside Docker
   # cron:
   #   image: alpine/curl
   #   command: >
-  #     sh -c "echo '* * * * * curl -s $$NEXTAUTH_URL/api/campaigns/scheduled/send' | crontab - && crond -f"
+  #     sh -c "echo '* * * * * curl -s -f $$NEXTAUTH_URL/api/campaigns/scheduled/send > /dev/null 2>&1' | crontab - && crond -f"
   #   environment:
   #     - NEXTAUTH_URL=${NEXTAUTH_URL}
   #   depends_on:
   #     - app
+
+volumes:
+  grillo-db:
+    driver: local

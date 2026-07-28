@@ -4,8 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY || "")
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -75,6 +73,7 @@ export async function POST(
     // Note: Resend free tier allows up to 100 emails/day. For larger lists, use batch API or queue.
     const results = []
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+    const resend = new Resend(process.env.RESEND_API_KEY || "")
 
     for (const contact of contacts) {
       try {
