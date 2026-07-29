@@ -7,9 +7,7 @@ echo "🏗️  Iniciando Grillo Mailing..."
 echo "📦 Ejecutando migraciones de Prisma..."
 npx prisma migrate deploy
 
-# Generate Prisma client
-echo "🔧 Generando Prisma client..."
-npx prisma generate
+# Prisma client is already generated inside the image at build time
 
 # Seed admin user (only if no users exist)
 echo "🌱 Verificando seed..."
