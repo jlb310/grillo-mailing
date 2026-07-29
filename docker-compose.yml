@@ -11,6 +11,9 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      # Password del admin en el seed inicial. Si no se define, el seed cae al
+      # default débil (admin123) — definirla en el panel de Dokploy.
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       # 🔴 IMPORTANTE: Este volumen hace que SQLite persista entre reinicios
       - grillo-db:/app/prisma
