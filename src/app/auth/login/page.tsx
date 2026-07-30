@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Mail, ArrowRight, Shield } from "lucide-react"
+import { ArrowRight, Shield } from "lucide-react"
+import { GrilloWordmark, GrilloWordmarkBold } from "@/components/brand/wordmark"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -38,17 +39,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#1a1a1a] flex-col justify-between p-12 text-white">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-              <Mail className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">Grillo</span>
-          </div>
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 bg-forest flex-col justify-between p-12 text-white">
+        <GrilloWordmark size={30} color="#ffffff" variant="onDark" />
         <div className="space-y-6">
-          <h2 className="text-4xl font-semibold tracking-tight leading-tight">
+          <h2 className="text-5xl leading-[1.1]">
             Tu contenido aprobado,<br />
             sin idas y vueltas.
           </h2>
@@ -66,65 +60,64 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center bg-white p-8">
+      <div className="flex-1 flex items-center justify-center bg-background p-8">
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
-            <div className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center">
-              <Mail className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">Grillo Mailing</span>
+          <div className="lg:hidden flex justify-center mb-8">
+            <GrilloWordmarkBold size={24} color="var(--text)" />
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">
+            <h1 className="text-4xl text-foreground">
               Bienvenido de vuelta
             </h1>
-            <p className="text-[#737373] text-base">
+            <p className="text-foreground-muted text-base">
               Ingresa tus credenciales para acceder a la plataforma
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-[#1a1a1a]">
+              <Label htmlFor="email" className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest">
                 Email
               </Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="username"
                 placeholder="admin@grillo.click"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 border-[#e5e5e5] bg-white focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10 rounded-xl text-base transition-all"
+                className="h-12 border-border bg-background-sunken focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-base transition-all"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-[#1a1a1a]">
+              <Label htmlFor="password" className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest">
                 Contraseña
               </Label>
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 border-[#e5e5e5] bg-white focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10 rounded-xl text-base transition-all"
+                className="h-12 border-border bg-background-sunken focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-base transition-all"
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+              <p className="text-sm text-danger bg-danger/5 border border-danger/10 px-4 py-3 rounded-xl">{error}</p>
             )}
             <Button
               type="submit"
-              className="w-full h-12 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-xl text-base font-medium transition-all"
+              className="w-full h-12 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-base font-bold shadow-lg shadow-primary/20 transition-all"
               disabled={loading}
             >
               {loading ? (
                 <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
                   Ingresando...
                 </span>
               ) : (
@@ -136,9 +129,15 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="pt-4 border-t border-[#e5e5e5]">
-            <p className="text-xs text-[#a3a3a3] text-center">
-              Admin por defecto: <code className="bg-[#f5f5f5] px-1.5 py-0.5 rounded text-[#525252]">admin@grillo.click</code> / <code className="bg-[#f5f5f5] px-1.5 py-0.5 rounded text-[#525252]">admin123</code>
+          <div className="pt-4 border-t border-border">
+            <p className="text-xs text-foreground-subtle text-center">
+              ¿Problemas para entrar? Escribinos a{" "}
+              <a
+                href="mailto:soporte@grillo.click"
+                className="text-primary font-medium underline underline-offset-2 hover:text-primary-hover transition-colors"
+              >
+                soporte@grillo.click
+              </a>
             </p>
           </div>
         </div>

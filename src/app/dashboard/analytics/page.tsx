@@ -43,7 +43,7 @@ export default function AnalyticsPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-[#e5e5e5] border-t-[#1a1a1a] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
     </div>
   )
   if (!data) return null
@@ -62,30 +62,30 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-semibold tracking-tight text-[#1a1a1a]">Analytics</h1>
-        <p className="text-[#737373] mt-2 text-lg">Métricas y rendimiento de tus campañas</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-foreground">Analytics</h1>
+        <p className="text-foreground-muted mt-2 text-lg">Métricas y rendimiento de tus campañas</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Card key={stat.name} className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+          <Card key={stat.name} className="border border-border bg-background-elev rounded-2xl shadow-none">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-                <span className="text-sm text-[#a3a3a3]">{stat.name}</span>
+                <span className="text-sm text-foreground-subtle">{stat.name}</span>
               </div>
-              <div className="text-2xl font-semibold text-[#1a1a1a] tracking-tight">{stat.value}</div>
+              <div className="text-2xl font-semibold text-foreground tracking-tight">{stat.value}</div>
               {'rate' in stat && (
-                <p className="text-xs text-[#a3a3a3] mt-1">{stat.rate}% tasa</p>
+                <p className="text-xs text-foreground-subtle mt-1">{stat.rate}% tasa</p>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+      <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">Actividad diaria (últimos 30 días)</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight text-foreground">Actividad diaria (últimos 30 días)</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -123,21 +123,21 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+      <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">Campañas recientes</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight text-foreground">Campañas recientes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {data.campaigns.slice(0, 10).map((campaign) => (
-              <div key={campaign.id} className="flex items-center justify-between p-4 bg-[#fafafa] rounded-xl hover:bg-[#f5f5f5] transition-colors">
+              <div key={campaign.id} className="flex items-center justify-between p-4 bg-background-sunken rounded-xl hover:bg-background-muted transition-colors">
                 <div>
-                  <p className="font-medium text-sm text-[#1a1a1a]">{campaign.name}</p>
-                  <p className="text-xs text-[#a3a3a3]">{campaign.subject}</p>
+                  <p className="font-medium text-sm text-foreground">{campaign.name}</p>
+                  <p className="text-xs text-foreground-subtle">{campaign.subject}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-[#1a1a1a]">{campaign._count.events} eventos</p>
-                  <p className="text-xs text-[#d4d4d4]">
+                  <p className="text-sm font-medium text-foreground">{campaign._count.events} eventos</p>
+                  <p className="text-xs text-foreground-subtle/60">
                     {campaign.sentAt ? new Date(campaign.sentAt).toLocaleDateString("es-CL") : "No enviada"}
                   </p>
                 </div>

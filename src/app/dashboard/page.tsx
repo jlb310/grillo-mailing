@@ -63,15 +63,15 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-[#1a1a1a]">
+          <h1 className="text-4xl font-semibold tracking-tight text-foreground">
             Dashboard
           </h1>
-          <p className="text-[#737373] mt-2 text-lg">
+          <p className="text-foreground-muted mt-2 text-lg">
             Bienvenido de vuelta, {session.user.name || session.user.email}
           </p>
         </div>
         <Link href="/dashboard/campaigns/new">
-          <Button className="h-11 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-xl text-sm font-medium gap-2">
+          <Button className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2">
             <Plus className="w-4 h-4" />
             Nueva campaña
           </Button>
@@ -82,17 +82,17 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Link key={stat.name} href={stat.href}>
-            <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none hover:shadow-md hover:border-[#d4d4d4] transition-all cursor-pointer group">
+            <Card className="border border-border bg-background-elev rounded-2xl shadow-none hover:shadow-md hover:border-border-strong transition-all cursor-pointer group">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 bg-[#f5f5f5] rounded-xl flex items-center justify-center group-hover:bg-[#1a1a1a] transition-colors">
-                    <stat.icon className="w-5 h-5 text-[#525252] group-hover:text-white transition-colors" />
+                  <div className="w-10 h-10 bg-background-muted rounded-xl flex items-center justify-center group-hover:bg-primary transition-colors">
+                    <stat.icon className="w-5 h-5 text-foreground-muted group-hover:text-primary-foreground transition-colors" />
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#d4d4d4] group-hover:text-[#1a1a1a] transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-foreground-subtle/60 group-hover:text-foreground transition-colors" />
                 </div>
-                <div className="text-3xl font-semibold text-[#1a1a1a] tracking-tight">{stat.value}</div>
-                <p className="text-sm text-[#a3a3a3] mt-1">{stat.name}</p>
-                <p className="text-xs text-[#d4d4d4] mt-0.5">{stat.description}</p>
+                <div className="text-3xl font-semibold text-foreground tracking-tight">{stat.value}</div>
+                <p className="text-sm text-foreground-subtle mt-1">{stat.name}</p>
+                <p className="text-xs text-foreground-subtle/60 mt-0.5">{stat.description}</p>
               </CardContent>
             </Card>
           </Link>
@@ -101,9 +101,9 @@ export default async function DashboardPage() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none lg:col-span-2">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none lg:col-span-2">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">
+            <CardTitle className="text-lg font-semibold tracking-tight text-foreground">
               Empezar rápido
             </CardTitle>
           </CardHeader>
@@ -114,34 +114,34 @@ export default async function DashboardPage() {
               { step: "03", title: "Crea tu primera campaña", desc: "Diseña un email, elige una lista y envía.", href: "/dashboard/campaigns/new", done: campaignsCount > 0 },
             ].map((item) => (
               <Link key={item.step} href={item.href}>
-                <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-[#fafafa] transition-colors group cursor-pointer">
+                <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-background-sunken transition-colors group cursor-pointer">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-semibold ${
-                    item.done ? "bg-[#dcfce7] text-[#16a34a]" : "bg-[#f5f5f5] text-[#a3a3a3] group-hover:bg-[#1a1a1a] group-hover:text-white transition-colors"
+                    item.done ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                   }`}>
                     {item.done ? "✓" : item.step}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-[#1a1a1a] text-sm">{item.title}</p>
-                    <p className="text-sm text-[#a3a3a3] mt-0.5">{item.desc}</p>
+                    <p className="font-medium text-foreground text-sm">{item.title}</p>
+                    <p className="text-sm text-foreground-subtle mt-0.5">{item.desc}</p>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#d4d4d4] group-hover:text-[#1a1a1a] transition-colors mt-2" />
+                  <ArrowRight className="w-4 h-4 text-foreground-subtle/60 group-hover:text-foreground transition-colors mt-2" />
                 </div>
               </Link>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">
+            <CardTitle className="text-lg font-semibold tracking-tight text-foreground">
               Actividad
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <TrendingUp className="w-10 h-10 text-[#e5e5e5] mx-auto mb-3" />
-              <p className="text-sm text-[#a3a3a3]">No hay actividad reciente</p>
-              <p className="text-xs text-[#d4d4d4] mt-1">Las métricas aparecerán aquí</p>
+              <TrendingUp className="w-10 h-10 text-border mx-auto mb-3" />
+              <p className="text-sm text-foreground-subtle">No hay actividad reciente</p>
+              <p className="text-xs text-foreground-subtle/60 mt-1">Las métricas aparecerán aquí</p>
             </div>
           </CardContent>
         </Card>

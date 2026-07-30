@@ -63,10 +63,10 @@ export default function CampaignDetailPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "SENT": return <Badge className="bg-[#dcfce7] text-[#16a34a] hover:bg-[#dcfce7] font-medium rounded-lg px-2.5 py-0.5"><CheckCircle className="w-3.5 h-3.5 mr-1" /> Enviada</Badge>
-      case "DRAFT": return <Badge variant="outline" className="text-[#a3a3a3] border-[#e5e5e5] font-medium rounded-lg px-2.5 py-0.5"><Clock className="w-3.5 h-3.5 mr-1" /> Borrador</Badge>
-      case "SENDING": return <Badge className="bg-[#fef3c7] text-[#d97706] hover:bg-[#fef3c7] font-medium rounded-lg px-2.5 py-0.5"><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Enviando</Badge>
-      case "FAILED": return <Badge className="bg-[#fee2e2] text-[#dc2626] hover:bg-[#fee2e2] font-medium rounded-lg px-2.5 py-0.5"><XCircle className="w-3.5 h-3.5 mr-1" /> Fallida</Badge>
+      case "SENT": return <Badge className="bg-success/10 text-success hover:bg-success/10 font-medium rounded-lg px-2.5 py-0.5"><CheckCircle className="w-3.5 h-3.5 mr-1" /> Enviada</Badge>
+      case "DRAFT": return <Badge variant="outline" className="text-foreground-subtle border-border font-medium rounded-lg px-2.5 py-0.5"><Clock className="w-3.5 h-3.5 mr-1" /> Borrador</Badge>
+      case "SENDING": return <Badge className="bg-warning/10 text-warning hover:bg-warning/10 font-medium rounded-lg px-2.5 py-0.5"><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Enviando</Badge>
+      case "FAILED": return <Badge className="bg-danger/10 text-danger hover:bg-danger/10 font-medium rounded-lg px-2.5 py-0.5"><XCircle className="w-3.5 h-3.5 mr-1" /> Fallida</Badge>
       default: return <Badge variant="secondary" className="rounded-lg px-2.5 py-0.5">{status}</Badge>
     }
   }
@@ -82,7 +82,7 @@ export default function CampaignDetailPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 border-[#e5e5e5] border-t-[#1a1a1a] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
     </div>
   )
   if (!campaign) return null
@@ -95,24 +95,24 @@ export default function CampaignDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/campaigns">
-            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-[#737373] hover:text-[#1a1a1a]">
+            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-foreground-muted hover:text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver
             </Button>
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">{campaign.name}</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{campaign.name}</h1>
               {getStatusBadge(campaign.status)}
             </div>
-            <p className="text-[#a3a3a3] mt-1">{campaign.subject}</p>
+            <p className="text-foreground-subtle mt-1">{campaign.subject}</p>
           </div>
         </div>
         {campaign.status === "DRAFT" && (
           <Button 
             onClick={handleSend} 
             disabled={sending}
-            className="h-11 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-xl text-sm font-medium gap-2"
+            className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2"
           >
             <Send className="w-4 h-4" />
             {sending ? "Enviando..." : "Enviar campaña"}
@@ -123,20 +123,20 @@ export default function CampaignDetailPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { name: "Enviados", value: stats.delivered, icon: Mail, color: "text-[#1a1a1a]" },
-          { name: "Abiertos", value: stats.opened, rate: stats.delivered > 0 ? Math.round((stats.opened / stats.delivered) * 100) : 0, icon: Eye, color: "text-[#525252]" },
-          { name: "Clicks", value: stats.clicked, rate: stats.delivered > 0 ? Math.round((stats.clicked / stats.delivered) * 100) : 0, icon: MousePointer, color: "text-[#737373]" },
-          { name: "Destinatarios", value: stats.total, icon: TrendingUp, color: "text-[#a3a3a3]" },
+          { name: "Enviados", value: stats.delivered, icon: Mail, color: "text-foreground" },
+          { name: "Abiertos", value: stats.opened, rate: stats.delivered > 0 ? Math.round((stats.opened / stats.delivered) * 100) : 0, icon: Eye, color: "text-foreground-muted" },
+          { name: "Clicks", value: stats.clicked, rate: stats.delivered > 0 ? Math.round((stats.clicked / stats.delivered) * 100) : 0, icon: MousePointer, color: "text-foreground-muted" },
+          { name: "Destinatarios", value: stats.total, icon: TrendingUp, color: "text-foreground-subtle" },
         ].map((stat) => (
-          <Card key={stat.name} className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+          <Card key={stat.name} className="border border-border bg-background-elev rounded-2xl shadow-none">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                <span className="text-sm text-[#a3a3a3]">{stat.name}</span>
+                <span className="text-sm text-foreground-subtle">{stat.name}</span>
               </div>
-              <div className="text-2xl font-semibold text-[#1a1a1a] tracking-tight">{stat.value}</div>
+              <div className="text-2xl font-semibold text-foreground tracking-tight">{stat.value}</div>
               {'rate' in stat && (
-                <p className="text-xs text-[#a3a3a3] mt-1">{stat.rate}% tasa</p>
+                <p className="text-xs text-foreground-subtle mt-1">{stat.rate}% tasa</p>
               )}
             </CardContent>
           </Card>
@@ -145,9 +145,9 @@ export default function CampaignDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Details */}
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none lg:col-span-2">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none lg:col-span-2">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">
+            <CardTitle className="text-lg font-semibold tracking-tight text-foreground">
               Detalles del envío
             </CardTitle>
           </CardHeader>
@@ -161,23 +161,23 @@ export default function CampaignDetailPage() {
               { label: "Creado", value: new Date(campaign.createdAt).toLocaleString("es-CL") },
               ...(campaign.sentAt ? [{ label: "Enviado", value: new Date(campaign.sentAt).toLocaleString("es-CL") }] : []),
             ].map((item) => (
-              <div key={item.label} className="flex justify-between items-start py-2 border-b border-[#f5f5f5] last:border-0">
-                <span className="text-[#a3a3a3]">{item.label}</span>
-                <span className="text-[#1a1a1a] font-medium text-right max-w-[60%]">{item.value}</span>
+              <div key={item.label} className="flex justify-between items-start py-2 border-b border-border last:border-0">
+                <span className="text-foreground-subtle">{item.label}</span>
+                <span className="text-foreground font-medium text-right max-w-[60%]">{item.value}</span>
               </div>
             ))}
           </CardContent>
         </Card>
 
         {/* Preview */}
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none lg:col-span-3">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none lg:col-span-3">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold tracking-tight text-[#1a1a1a]">
+            <CardTitle className="text-lg font-semibold tracking-tight text-foreground">
               Vista previa
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="border border-[#e5e5e5] rounded-xl overflow-hidden m-4">
+            <div className="border border-border rounded-xl overflow-hidden m-4">
               <iframe
                 srcDoc={campaign.htmlContent}
                 className="w-full h-[500px] border-0"

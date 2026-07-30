@@ -81,22 +81,22 @@ export default function NewTemplatePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/templates">
-            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-[#737373] hover:text-[#1a1a1a]">
+            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-foreground-muted hover:text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">Nuevo template</h1>
-            <p className="text-[#a3a3a3] mt-1">Diseña tu template de email con el editor visual</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Nuevo template</h1>
+            <p className="text-foreground-subtle mt-1">Diseña tu template de email con el editor visual</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPreviewMode(!previewMode)} className="h-10 rounded-xl border-[#e5e5e5] text-[#1a1a1a] hover:bg-[#f5f5f5]">
+          <Button variant="outline" onClick={() => setPreviewMode(!previewMode)} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
             <Eye className="w-4 h-4 mr-2" />
             {previewMode ? "Editar" : "Vista previa"}
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="h-10 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-xl text-sm font-medium gap-2">
+          <Button onClick={handleSave} disabled={saving} className="h-10 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2">
             <Save className="w-4 h-4" />
             {saving ? "Guardando..." : "Guardar template"}
           </Button>
@@ -105,26 +105,26 @@ export default function NewTemplatePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+          <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
             <CardContent className="p-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm text-[#525252]">Nombre del template</Label>
+                <Label htmlFor="name" className="text-sm text-foreground-muted">Nombre del template</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Newsletter mensual"
-                  className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                  className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="subject" className="text-sm text-[#525252]">Asunto del email</Label>
+                <Label htmlFor="subject" className="text-sm text-foreground-muted">Asunto del email</Label>
                 <Input
                   id="subject"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Ej: Novedades de este mes"
-                  className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                  className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
                 />
               </div>
             </CardContent>
@@ -132,13 +132,13 @@ export default function NewTemplatePage() {
 
           {!previewMode ? (
             <Tabs defaultValue="visual" className="w-full">
-              <TabsList className="bg-[#f5f5f5] rounded-xl h-10 p-1">
-                <TabsTrigger value="visual" className="rounded-lg text-sm data-[state=active]:bg-white data-[state=active]:text-[#1a1a1a] data-[state=active]:shadow-sm">Editor Visual</TabsTrigger>
-                <TabsTrigger value="html" className="rounded-lg text-sm data-[state=active]:bg-white data-[state=active]:text-[#1a1a1a] data-[state=active]:shadow-sm">HTML</TabsTrigger>
-                <TabsTrigger value="text" className="rounded-lg text-sm data-[state=active]:bg-white data-[state=active]:text-[#1a1a1a] data-[state=active]:shadow-sm">Texto plano</TabsTrigger>
+              <TabsList className="bg-background-muted rounded-xl h-10 p-1">
+                <TabsTrigger value="visual" className="rounded-lg text-sm data-[state=active]:bg-background-elev data-[state=active]:text-foreground data-[state=active]:shadow-sm">Editor Visual</TabsTrigger>
+                <TabsTrigger value="html" className="rounded-lg text-sm data-[state=active]:bg-background-elev data-[state=active]:text-foreground data-[state=active]:shadow-sm">HTML</TabsTrigger>
+                <TabsTrigger value="text" className="rounded-lg text-sm data-[state=active]:bg-background-elev data-[state=active]:text-foreground data-[state=active]:shadow-sm">Texto plano</TabsTrigger>
               </TabsList>
               <TabsContent value="visual" className="mt-3">
-                <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none overflow-hidden">
+                <Card className="border border-border bg-background-elev rounded-2xl shadow-none overflow-hidden">
                   <CardContent className="p-0">
                     <Editor
                       apiKey="no-api-key"
@@ -167,24 +167,24 @@ export default function NewTemplatePage() {
                 </Card>
               </TabsContent>
               <TabsContent value="html" className="mt-3">
-                <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+                <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
                   <CardContent className="p-0">
                     <textarea
                       value={htmlContent}
                       onChange={(e) => setHtmlContent(e.target.value)}
-                      className="w-full h-[500px] p-5 font-mono text-sm bg-[#fafafa] border-0 resize-none focus:outline-none focus:ring-0 rounded-2xl"
+                      className="w-full h-[500px] p-5 font-mono text-sm bg-background-sunken border-0 resize-none focus:outline-none focus:ring-0 rounded-2xl"
                       spellCheck={false}
                     />
                   </CardContent>
                 </Card>
               </TabsContent>
               <TabsContent value="text" className="mt-3">
-                <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+                <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
                   <CardContent className="p-0">
                     <textarea
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
-                      className="w-full h-[500px] p-5 font-mono text-sm bg-[#fafafa] border-0 resize-none focus:outline-none focus:ring-0 rounded-2xl"
+                      className="w-full h-[500px] p-5 font-mono text-sm bg-background-sunken border-0 resize-none focus:outline-none focus:ring-0 rounded-2xl"
                       placeholder="Versión en texto plano del email..."
                       spellCheck={false}
                     />
@@ -193,7 +193,7 @@ export default function NewTemplatePage() {
               </TabsContent>
             </Tabs>
           ) : (
-            <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+            <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
               <CardContent className="p-0">
                 <iframe
                   srcDoc={htmlContent}
@@ -206,9 +206,9 @@ export default function NewTemplatePage() {
         </div>
 
         <div className="space-y-4">
-          <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+          <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-[#1a1a1a]">Variables disponibles</CardTitle>
+              <CardTitle className="text-sm font-medium text-foreground">Variables disponibles</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               {[
@@ -220,8 +220,8 @@ export default function NewTemplatePage() {
                 { label: "unsubscribeUrl", desc: "Link de baja" },
               ].map((v) => (
                 <div key={v.label} className="flex items-center justify-between">
-                  <code className="bg-[#f5f5f5] px-2 py-1 rounded-lg text-xs text-[#525252]">{`{{${v.label}}}`}</code>
-                  <span className="text-xs text-[#a3a3a3]">{v.desc}</span>
+                  <code className="bg-background-muted px-2 py-1 rounded-lg text-xs text-foreground-muted">{`{{${v.label}}}`}</code>
+                  <span className="text-xs text-foreground-subtle">{v.desc}</span>
                 </div>
               ))}
             </CardContent>

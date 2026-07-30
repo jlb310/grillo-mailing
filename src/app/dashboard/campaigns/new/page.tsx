@@ -139,7 +139,7 @@ export default function NewCampaignPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-[#e5e5e5] border-t-[#1a1a1a] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
       </div>
     )
   }
@@ -149,14 +149,14 @@ export default function NewCampaignPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/campaigns">
-            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-[#737373] hover:text-[#1a1a1a]">
+            <Button variant="ghost" size="sm" className="rounded-xl h-9 text-foreground-muted hover:text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">Nueva campaña</h1>
-            <p className="text-[#a3a3a3] mt-1">Configura y envía tu campaña de email</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Nueva campaña</h1>
+            <p className="text-foreground-subtle mt-1">Configura y envía tu campaña de email</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -164,7 +164,7 @@ export default function NewCampaignPage() {
             variant="outline" 
             onClick={() => handleSubmit("draft")} 
             disabled={saving || sending || scheduling}
-            className="h-11 rounded-xl border-[#e5e5e5] text-[#1a1a1a] hover:bg-[#f5f5f5]"
+            className="h-11 rounded-xl border-border text-foreground hover:bg-background-muted"
           >
             <Save className="w-4 h-4 mr-2" />
             {saving ? "Guardando..." : "Guardar borrador"}
@@ -172,7 +172,7 @@ export default function NewCampaignPage() {
           <Button 
             onClick={() => handleSubmit("schedule")} 
             disabled={scheduling || !formData.domainId || !formData.contactListId || !formData.scheduledAt}
-            className="h-11 bg-[#525252] hover:bg-[#737373] text-white rounded-xl text-sm font-medium gap-2"
+            className="h-11 bg-primary/10 hover:bg-primary/15 text-primary border border-primary/20 rounded-xl text-sm font-medium gap-2"
           >
             <Clock className="w-4 h-4" />
             {scheduling ? "Programando..." : "Programar"}
@@ -180,7 +180,7 @@ export default function NewCampaignPage() {
           <Button 
             onClick={() => handleSubmit("send")} 
             disabled={sending || !formData.domainId || !formData.contactListId}
-            className="h-11 bg-[#1a1a1a] hover:bg-[#333333] text-white rounded-xl text-sm font-medium gap-2"
+            className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2"
           >
             <Send className="w-4 h-4" />
             {sending ? "Enviando..." : "Enviar ahora"}
@@ -189,25 +189,25 @@ export default function NewCampaignPage() {
       </div>
 
       <div className="space-y-4">
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold tracking-tight text-[#1a1a1a]">Configuración general</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Configuración general</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm text-[#525252]">Nombre de la campaña</Label>
+              <Label htmlFor="name" className="text-sm text-foreground-muted">Nombre de la campaña</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ej: Newsletter Julio 2026"
-                className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-[#525252]">Template base</Label>
+              <Label className="text-sm text-foreground-muted">Template base</Label>
               <Select onValueChange={(value) => handleTemplateChange(value as string)}>
-                <SelectTrigger className="h-11 rounded-xl border-[#e5e5e5]">
+                <SelectTrigger className="h-11 rounded-xl border-border">
                   <SelectValue placeholder="Selecciona un template (opcional)" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -220,49 +220,49 @@ export default function NewCampaignPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold tracking-tight text-[#1a1a1a]">Remitente</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Remitente</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="fromName" className="text-sm text-[#525252]">Nombre del remitente</Label>
+                <Label htmlFor="fromName" className="text-sm text-foreground-muted">Nombre del remitente</Label>
                 <Input
                   id="fromName"
                   value={formData.fromName}
                   onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
                   placeholder="Grillo"
-                  className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                  className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fromEmail" className="text-sm text-[#525252]">Email del remitente</Label>
+                <Label htmlFor="fromEmail" className="text-sm text-foreground-muted">Email del remitente</Label>
                 <Input
                   id="fromEmail"
                   type="email"
                   value={formData.fromEmail}
                   onChange={(e) => setFormData({ ...formData, fromEmail: e.target.value })}
                   placeholder="hola@tu-dominio.com"
-                  className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                  className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="replyTo" className="text-sm text-[#525252]">Reply-to (opcional)</Label>
+              <Label htmlFor="replyTo" className="text-sm text-foreground-muted">Reply-to (opcional)</Label>
               <Input
                 id="replyTo"
                 type="email"
                 value={formData.replyTo}
                 onChange={(e) => setFormData({ ...formData, replyTo: e.target.value })}
                 placeholder="soporte@tu-dominio.com"
-                className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-[#525252]">Dominio de envío</Label>
+              <Label className="text-sm text-foreground-muted">Dominio de envío</Label>
               <Select onValueChange={(value) => setFormData({ ...formData, domainId: value as string })}>
-                <SelectTrigger className="h-11 rounded-xl border-[#e5e5e5]">
+                <SelectTrigger className="h-11 rounded-xl border-border">
                   <SelectValue placeholder="Selecciona un dominio verificado" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -272,21 +272,21 @@ export default function NewCampaignPage() {
                 </SelectContent>
               </Select>
               {domains.length === 0 && (
-                <p className="text-sm text-[#d97706]">No tienes dominios verificados. <Link href="/dashboard/domains" className="underline">Verifica uno primero</Link>.</p>
+                <p className="text-sm text-warning">No tienes dominios verificados. <Link href="/dashboard/domains" className="underline">Verifica uno primero</Link>.</p>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold tracking-tight text-[#1a1a1a]">Destinatarios y programación</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Destinatarios y programación</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm text-[#525252]">Lista de contactos</Label>
+              <Label className="text-sm text-foreground-muted">Lista de contactos</Label>
               <Select onValueChange={(value) => setFormData({ ...formData, contactListId: value as string })}>
-                <SelectTrigger className="h-11 rounded-xl border-[#e5e5e5]">
+                <SelectTrigger className="h-11 rounded-xl border-border">
                   <SelectValue placeholder="Selecciona una lista" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -297,54 +297,54 @@ export default function NewCampaignPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="scheduledAt" className="text-sm text-[#525252]">Programar envío (opcional)</Label>
+              <Label htmlFor="scheduledAt" className="text-sm text-foreground-muted">Programar envío (opcional)</Label>
               <Input
                 id="scheduledAt"
                 type="datetime-local"
                 value={formData.scheduledAt}
                 onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
-                className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
               />
-              <p className="text-xs text-[#a3a3a3]">
+              <p className="text-xs text-foreground-subtle">
                 Si no seleccionas fecha, puedes enviar manualmente con &quot;Enviar ahora&quot; o guardar como borrador.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-[#e5e5e5] bg-white rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold tracking-tight text-[#1a1a1a]">Contenido</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Contenido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="subject" className="text-sm text-[#525252]">Asunto</Label>
+              <Label htmlFor="subject" className="text-sm text-foreground-muted">Asunto</Label>
               <Input
                 id="subject"
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 placeholder="Asunto del email"
-                className="h-11 rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10"
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="html" className="text-sm text-[#525252]">Contenido HTML</Label>
+              <Label htmlFor="html" className="text-sm text-foreground-muted">Contenido HTML</Label>
               <Textarea
                 id="html"
                 value={formData.htmlContent}
                 onChange={(e) => setFormData({ ...formData, htmlContent: e.target.value })}
                 rows={12}
-                className="font-mono text-sm rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10 resize-none"
+                className="font-mono text-sm rounded-xl border-border focus:border-primary focus:ring-primary/20 resize-none"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="text" className="text-sm text-[#525252]">Contenido texto plano (opcional)</Label>
+              <Label htmlFor="text" className="text-sm text-foreground-muted">Contenido texto plano (opcional)</Label>
               <Textarea
                 id="text"
                 value={formData.textContent}
                 onChange={(e) => setFormData({ ...formData, textContent: e.target.value })}
                 rows={4}
-                className="font-mono text-sm rounded-xl border-[#e5e5e5] focus:border-[#1a1a1a] focus:ring-[#1a1a1a]/10 resize-none"
+                className="font-mono text-sm rounded-xl border-border focus:border-primary focus:ring-primary/20 resize-none"
                 placeholder="Versión en texto plano..."
               />
             </div>

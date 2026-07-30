@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { InlineScript } from "@/components/inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +13,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Titulares. Misma tipografía de marca que grillo-saas.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -27,9 +35,21 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="light"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        {/*
+          Aplica el tema guardado antes del primer paint. Sin esto la app
+          arranca en light y salta a dark, que es el flash clásico. Corre
+          inline en el <head> justamente para adelantarse al render.
+        */}
+        <InlineScript
+          html={`(function(){try{var t=localStorage.getItem('grillo-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})();`}
+        />
+      </head>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />
       </body>
