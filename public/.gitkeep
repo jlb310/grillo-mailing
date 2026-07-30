@@ -1,0 +1,2 @@
+# Mantiene public/ en el repo: git no versiona directorios vacíos y el
+# Dockerfile hace COPY /app/public, que falla si no existe.
