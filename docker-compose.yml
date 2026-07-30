@@ -7,16 +7,17 @@ services:
       - "3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL:-file:./prisma/dev.db}
+      # Postgres corre como servicio aparte en Dokploy (grillo-mailing-db), no
+      # como parte de este compose. Se alcanza por hostname en dokploy-network.
+      - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
-      # Password del admin en el seed inicial. Si no se define, el seed cae al
-      # default débil (admin123) — definirla en el panel de Dokploy.
+      # Password del admin en el seed inicial. Si no se define, el seed genera
+      # una clave aleatoria y la imprime en los logs del contenedor.
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    volumes:
-      # 🔴 IMPORTANTE: Este volumen hace que SQLite persista entre reinicios
-      - grillo-db:/app/prisma
+    networks:
+      - dokploy-network
     restart: unless-stopped
 
   # Optional: Cron service for scheduled campaigns
@@ -30,6 +31,8 @@ services:
   #   depends_on:
   #     - app
 
-volumes:
-  grillo-db:
-    driver: local
+networks:
+  # Red que Dokploy usa para Traefik y para los servicios de base de datos.
+  # Es externa: la crea Dokploy, no este compose.
+  dokploy-network:
+    external: true

@@ -82,9 +82,9 @@ Descomenta la sección `cron` en `docker-compose.yml`.
 
 | Variable | Descripción |
 |---|---|
-| `DATABASE_URL` | SQLite: `file:./dev.db` o PostgreSQL: `postgresql://...` |
+| `DATABASE_URL` | PostgreSQL: `postgresql://usuario:clave@host:5432/base` |
 | `NEXTAUTH_SECRET` | Clave secreta para JWT (generar con `openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | URL base de la app (ej: `https://grillo-mailing.spacehost.cl`) |
+| `NEXTAUTH_URL` | URL base de la app (ej: `https://correo.grillo.click`) |
 | `RESEND_API_KEY` | API key de Resend (obtener en [resend.com](https://resend.com)) |
 
 ### Configurar Resend

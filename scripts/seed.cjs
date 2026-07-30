@@ -2,14 +2,17 @@
 // (ver scripts/entrypoint.sh) y es idempotente: si el admin ya existe, no hace nada.
 const crypto = require('node:crypto')
 const { PrismaClient } = require('@prisma/client')
-const { PrismaLibSql } = require('@prisma/adapter-libsql')
+const { PrismaPg } = require('@prisma/adapter-pg')
 const bcrypt = require('bcryptjs')
 
 const ADMIN_EMAIL = 'admin@grillo.click'
 
-const adapter = new PrismaLibSql({
-  url: process.env.DATABASE_URL || 'file:./prisma/dev.db',
-})
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL no está definida')
+  process.exit(1)
+}
+
+const adapter = new PrismaPg(process.env.DATABASE_URL)
 const prisma = new PrismaClient({ adapter })
 
 async function seed() {

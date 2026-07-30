@@ -1,4 +1,4 @@
-# Multi-stage build for Next.js 16 + Prisma + SQLite (dev) or PostgreSQL (prod)
+# Multi-stage build for Next.js 16 + Prisma + PostgreSQL
 
 # ---- Dependencies ----
 FROM node:22-alpine AS deps
@@ -60,10 +60,9 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/scripts ./scripts
 
-# Make entrypoint executable and ensure DB directory exists
+# Make entrypoint executable
 RUN chmod +x /app/scripts/entrypoint.sh \
-  && mkdir -p /app/prisma \
-  && chown -R nextjs:nodejs /app/prisma /app/scripts
+  && chown -R nextjs:nodejs /app/scripts
 
 USER nextjs
 
