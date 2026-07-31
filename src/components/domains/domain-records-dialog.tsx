@@ -4,6 +4,8 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Check, Copy, Loader2, RefreshCw } from "lucide-react"
+import { Check, Copy, Loader2, RefreshCw, Send } from "lucide-react"
 
 export interface DnsRecord {
   record: string
@@ -109,6 +111,30 @@ export function DomainRecordsDialog({
   onSynced?: () => void
 }) {
   const [verifying, setVerifying] = useState(false)
+  const [testTo, setTestTo] = useState("")
+  const [sending, setSending] = useState(false)
+
+  const sendTest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detail) return
+    setSending(true)
+    try {
+      const res = await fetch(`/api/domains/${detail.domain.id}/test-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: testTo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "No se pudo enviar la prueba")
+
+      setTestTo("")
+      toast.success(`Prueba enviada a ${data.to} desde ${data.from}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo enviar la prueba")
+    } finally {
+      setSending(false)
+    }
+  }
 
   const verify = async () => {
     if (!detail) return
@@ -226,6 +252,37 @@ export function DomainRecordsDialog({
               Verificar
             </Button>
           </div>
+        )}
+
+        {/* Prueba de envío: sale por la cuenta de Resend de este cliente y con
+            este dominio, que es lo que de verdad hay que comprobar antes de
+            armarle una campaña. */}
+        {detail?.domain.status === "VERIFIED" && (
+          <form onSubmit={sendTest} className="flex items-end gap-2 border-t border-border pt-4">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="test-to" className="text-sm text-foreground-muted">
+                Enviar una prueba a
+              </Label>
+              <Input
+                id="test-to"
+                type="email"
+                placeholder="tu@correo.cl"
+                value={testTo}
+                onChange={(e) => setTestTo(e.target.value)}
+                required
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={sending}
+              variant="outline"
+              className="h-11 rounded-xl text-sm font-medium gap-2"
+            >
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Enviar prueba
+            </Button>
+          </form>
         )}
       </DialogContent>
     </Dialog>
