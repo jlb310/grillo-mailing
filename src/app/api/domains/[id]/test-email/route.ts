@@ -43,9 +43,21 @@ export async function POST(
   }
 
   // El buzón de origen no necesita existir: Resend solo exige que el dominio
-  // esté verificado en la cuenta desde la que se envía.
+  // esté verificado en la cuenta desde la que se envía. Pero la parte local
+  // entra a la cabecera From, así que se valida en vez de interpolarse: un
+  // salto de línea ahí es inyección de cabeceras.
   const localPart = String(body.from ?? "pruebas").trim() || "pruebas"
-  const from = `${domain.organization.name} <${localPart}@${domain.name}>`
+  if (!/^[A-Za-z0-9._%+-]{1,64}$/.test(localPart)) {
+    return NextResponse.json(
+      { error: "El buzón de origen solo admite letras, números y . _ % + -" },
+      { status: 400 }
+    )
+  }
+
+  // El nombre de la organización lo escribe un admin, pero igual va entre
+  // comillas y sin caracteres que puedan cerrar el display-name.
+  const displayName = domain.organization.name.replace(/[\r\n"<>]/g, " ").trim()
+  const from = `"${displayName}" <${localPart}@${domain.name}>`
 
   try {
     // Sincronizar primero baja el estado real y, si hace falta, adopta el
