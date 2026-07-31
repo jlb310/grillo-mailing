@@ -22,9 +22,49 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
+const TITLE = "Grillo Mailing — Plataforma de Email Marketing"
+const DESCRIPTION = "Gestiona campañas de email para tus clientes con Grillo Mailing"
+
+// Base para resolver las URLs absolutas que exigen Open Graph y Twitter. Se
+// parsea con tolerancia a propósito: si la env viene mal escrita preferimos
+// perder las tarjetas sociales antes que romper el layout al importarlo
+// (mismo criterio que lib/prisma con DATABASE_URL).
+function resolveSiteUrl(): URL {
+  // NEXTAUTH_URL es la única URL pública que ya declara el proyecto (ver
+  // .env.example y los envíos de campañas), así que no inventamos otra.
+  const raw = process.env.NEXTAUTH_URL
+  try {
+    if (raw) return new URL(raw)
+  } catch {
+    // URL inválida: caemos al default de desarrollo.
+  }
+  return new URL("http://localhost:3000")
+}
+
+// Las imágenes (og/twitter) y los íconos no se declaran aquí: los aportan los
+// archivos de convención vecinos — icon.svg, favicon.ico, apple-icon.png,
+// opengraph-image.png y twitter-image.png.
 export const metadata: Metadata = {
-  title: "Grillo Mailing — Plataforma de Email Marketing",
-  description: "Gestiona campañas de email para tus clientes con Grillo Mailing",
+  metadataBase: resolveSiteUrl(),
+  title: {
+    default: TITLE,
+    template: "%s · Grillo Mailing",
+  },
+  description: DESCRIPTION,
+  applicationName: "Grillo Mailing",
+  openGraph: {
+    type: "website",
+    siteName: "Grillo Mailing",
+    locale: "es_CL",
+    url: "/",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
