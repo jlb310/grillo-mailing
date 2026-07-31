@@ -153,8 +153,9 @@ export function DomainRecordsDialog({
 
         {detail && !detail.linkedToResend && (
           <p className="text-sm text-warning bg-warning/10 rounded-xl p-4">
-            Este dominio se creó antes de la integración con Resend, así que no tiene registros que
-            mostrar. Bórralo y vuelve a agregarlo para darlo de alta.
+            Este dominio no está en la cuenta de Resend de su organización, así que no hay registros
+            que mostrar. Si lo diste de alta en otra cuenta, corrige la API key de la organización;
+            si no existe en ninguna, bórralo y vuelve a agregarlo.
           </p>
         )}
 

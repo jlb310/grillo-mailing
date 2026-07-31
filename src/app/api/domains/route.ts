@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import {
   DEFAULT_DOMAIN_REGION,
   ResendConfigError,
+  findResendDomainByName,
   getResendClient,
   isDomainRegion,
   mapDomainStatus,
@@ -69,7 +70,17 @@ export async function POST(req: NextRequest) {
     // El dominio se da de alta en la cuenta de Resend de ESTE cliente, que es
     // la misma desde la que después saldrán sus campañas.
     const resend = await getResendClient(organizationId)
-    const { data, error } = await resend.domains.create({ name, region })
+
+    // Si ya está en la cuenta lo adoptamos en vez de crearlo: puede haberse dado
+    // de alta a mano en el dashboard, y entonces suele estar hasta verificado.
+    // Crear de nuevo falla siempre, y en una cuenta Free el error que devuelve
+    // Resend es el del límite del plan, que despista.
+    const alreadyThere = await findResendDomainByName(resend, name)
+    const adopted = alreadyThere !== null
+
+    const { data, error } = adopted
+      ? await resend.domains.get(alreadyThere.id)
+      : await resend.domains.create({ name, region })
 
     if (error || !data) {
       return NextResponse.json(
@@ -93,11 +104,13 @@ export async function POST(req: NextRequest) {
         domain,
         region: data.region,
         records: toDnsRecords(data.records, name),
+        adopted,
       })
     } catch (dbError) {
       // El alta en Resend ya ocurrió: la deshacemos para no dejar el dominio
-      // colgando en la cuenta sin un registro local que lo represente.
-      await resend.domains.remove(data.id).catch(() => {})
+      // colgando en la cuenta sin un registro local que lo represente. Si lo
+      // adoptamos no se toca: ya existía antes de que la app apareciera.
+      if (!adopted) await resend.domains.remove(data.id).catch(() => {})
       throw dbError
     }
   } catch (error) {

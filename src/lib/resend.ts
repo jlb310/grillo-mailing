@@ -61,6 +61,29 @@ export async function resolveResendApiKey(organizationId?: string): Promise<stri
 }
 
 /**
+ * Busca un dominio por nombre en la cuenta.
+ *
+ * Es lo que permite ADOPTAR un dominio que ya existe en Resend en vez de
+ * intentar crearlo otra vez. Pasa siempre que el dominio se dio de alta a mano
+ * en el dashboard, o antes de que la app hablara con Resend. Y el error del
+ * alta en ese caso engaña: en una cuenta Free, cuyo único cupo lo ocupa ese
+ * mismo dominio, Resend contesta con el límite del plan antes de darse cuenta
+ * de que es un duplicado.
+ *
+ * No pagina: el tope de dominios por cuenta (1 en Free, 10 en Pro) entra de
+ * sobra en la primera página.
+ */
+export async function findResendDomainByName(
+  resend: Resend,
+  name: string
+): Promise<{ id: string } | null> {
+  const { data, error } = await resend.domains.list()
+  if (error) throw new Error(error.message)
+
+  return data?.data.find((domain) => domain.name === name) ?? null
+}
+
+/**
  * Normaliza lo que escribe el usuario: Resend espera el dominio pelado.
  * Devuelve null si no parece un dominio.
  */

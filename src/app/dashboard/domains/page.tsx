@@ -111,7 +111,11 @@ export default function DomainsPage() {
       // lo único que el usuario necesita hacer a continuación.
       setRecordsDetail({ ...data, linkedToResend: true })
       setRecordsOpen(true)
-      toast.success(`${data.domain.name} dado de alta en Resend`)
+      toast.success(
+        data.adopted
+          ? `${data.domain.name} ya existía en Resend: quedó vinculado con su estado real`
+          : `${data.domain.name} dado de alta en Resend`
+      )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo crear el dominio")
     } finally {

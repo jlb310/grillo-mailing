@@ -32,24 +32,28 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (!domain.resendDomainId) {
-    return NextResponse.json(
-      {
-        error:
-          "Este dominio se creó antes de la integración y no existe en Resend. Bórralo y vuelve a agregarlo.",
-      },
-      { status: 409 }
-    )
-  }
-
   try {
+    // Sincronizar primero resuelve el id que falta cuando el dominio se dio de
+    // alta a mano en Resend o antes de la integración: syncDomainWithResend lo
+    // adopta por nombre. Sin eso no habría a qué pedirle la verificación.
+    const synced = await syncDomainWithResend(domain)
+    if (!synced.linkedToResend) {
+      return NextResponse.json(
+        {
+          error: `${domain.name} no existe en la cuenta de Resend de este cliente. Revisa que la API key sea la de la cuenta donde lo diste de alta.`,
+        },
+        { status: 409 }
+      )
+    }
+
+    const resendDomainId = synced.domain.resendDomainId!
     const resend = await getResendClient(domain.organizationId)
-    const { error } = await resend.domains.verify(domain.resendDomainId)
+    const { error } = await resend.domains.verify(resendDomainId)
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 502 })
     }
 
-    return NextResponse.json(await syncDomainWithResend(domain))
+    return NextResponse.json(await syncDomainWithResend(synced.domain))
   } catch (error) {
     if (error instanceof ResendConfigError) {
       return NextResponse.json({ error: error.message }, { status: 503 })
