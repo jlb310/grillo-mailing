@@ -186,13 +186,16 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     transition: background-color 0.3s ease, color 0.3s ease;
   }
-  /* Titulares en Instrument Serif, como en grillo-saas. */
+  /* Titulares en Instrument Serif, como en grillo-saas.
+     Sin tracking-tight y en peso normal a propósito: Instrument Serif solo trae
+     el 400, así que un font-semibold encima lo engorda de forma sintética y se
+     ve distinto al de grillo.click, donde los títulos son `font-serif` pelado
+     con leading-tight. */
   h1, h2, h3, h4 {
     font-family: var(--font-instrument-serif), serif;
-    @apply font-normal tracking-tight;
+    @apply font-normal leading-tight;
   }
   h5, h6 {
     @apply font-semibold tracking-tight;

@@ -35,7 +35,7 @@ export default function TemplatesPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Templates</h1>
+          <h1 className="text-4xl text-foreground">Templates</h1>
           <p className="text-foreground-muted mt-2 text-lg">Diseña y guarda templates reutilizables para tus campañas</p>
         </div>
         <Link href="/dashboard/templates/new">

@@ -99,7 +99,7 @@ export function ResendCredentialsDialog({
 
       <DialogContent className="sm:max-w-lg rounded-2xl border-border">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+          <DialogTitle className="text-xl text-foreground">
             Resend de {organizationName}
           </DialogTitle>
           <DialogDescription>

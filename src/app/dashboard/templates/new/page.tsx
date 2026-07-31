@@ -87,7 +87,7 @@ export default function NewTemplatePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Nuevo template</h1>
+            <h1 className="text-3xl text-foreground">Nuevo template</h1>
             <p className="text-foreground-subtle mt-1">Diseña tu template de email con el editor visual</p>
           </div>
         </div>

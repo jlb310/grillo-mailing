@@ -116,7 +116,7 @@ export default function ContactsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Contactos</h1>
+          <h1 className="text-4xl text-foreground">Contactos</h1>
           <p className="text-foreground-muted mt-2 text-lg">Gestiona tus contactos y listas de envío</p>
         </div>
         <div className="flex gap-2">
@@ -134,7 +134,7 @@ export default function ContactsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl rounded-2xl border-border">
               <DialogHeader>
-                <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">Importar contactos desde CSV</DialogTitle>
+                <DialogTitle className="text-xl text-foreground">Importar contactos desde CSV</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-2">
                 <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-border-strong transition-colors">
@@ -206,7 +206,7 @@ export default function ContactsPage() {
             </DialogTrigger>
             <DialogContent className="rounded-2xl border-border">
               <DialogHeader>
-                <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">Nuevo contacto</DialogTitle>
+                <DialogTitle className="text-xl text-foreground">Nuevo contacto</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                 <div className="grid grid-cols-2 gap-4">

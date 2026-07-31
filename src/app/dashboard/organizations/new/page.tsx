@@ -52,7 +52,7 @@ export default function NewOrganizationPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Nueva organización</h1>
+          <h1 className="text-3xl text-foreground">Nueva organización</h1>
           <p className="text-foreground-subtle mt-1">Crea un nuevo cliente en la plataforma</p>
         </div>
       </div>

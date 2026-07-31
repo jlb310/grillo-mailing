@@ -63,7 +63,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-4xl text-foreground">
             Dashboard
           </h1>
           <p className="text-foreground-muted mt-2 text-lg">

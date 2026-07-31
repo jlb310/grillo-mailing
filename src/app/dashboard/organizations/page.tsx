@@ -39,7 +39,7 @@ export default async function OrganizationsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Organizaciones</h1>
+          <h1 className="text-4xl text-foreground">Organizaciones</h1>
           <p className="text-foreground-muted mt-2 text-lg">Gestiona los clientes de la plataforma</p>
         </div>
         <Link href="/dashboard/organizations/new">
@@ -60,7 +60,7 @@ export default async function OrganizationsPage() {
                     <Building2 className="w-5 h-5 text-foreground-muted" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm">{org.name}</h3>
+                    <h3 className="text-foreground text-lg">{org.name}</h3>
                     <p className="text-sm text-foreground-subtle">{org.slug}</p>
                   </div>
                 </div>

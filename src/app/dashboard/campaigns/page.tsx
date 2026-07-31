@@ -59,7 +59,7 @@ export default function CampaignsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Campañas</h1>
+          <h1 className="text-4xl text-foreground">Campañas</h1>
           <p className="text-foreground-muted mt-2 text-lg">Gestiona tus campañas de email</p>
         </div>
         <Link href="/dashboard/campaigns/new">
@@ -82,7 +82,7 @@ export default function CampaignsPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-foreground text-sm truncate">{campaign.name}</h3>
+                      <h3 className="text-foreground text-lg truncate">{campaign.name}</h3>
                       {getStatusBadge(campaign.status)}
                     </div>
                     <p className="text-sm text-foreground-subtle mt-0.5 truncate">{campaign.subject}</p>

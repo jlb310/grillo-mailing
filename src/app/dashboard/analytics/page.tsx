@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground">Analytics</h1>
+        <h1 className="text-4xl text-foreground">Analytics</h1>
         <p className="text-foreground-muted mt-2 text-lg">Métricas y rendimiento de tus campañas</p>
       </div>
 

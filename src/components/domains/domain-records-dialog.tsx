@@ -136,7 +136,7 @@ export function DomainRecordsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl rounded-2xl border-border max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+          <DialogTitle className="text-xl text-foreground">
             Registros DNS {detail ? `de ${detail.domain.name}` : ""}
           </DialogTitle>
           <DialogDescription>

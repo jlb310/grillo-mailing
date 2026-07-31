@@ -102,7 +102,7 @@ export default function CampaignDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{campaign.name}</h1>
+              <h1 className="text-3xl text-foreground">{campaign.name}</h1>
               {getStatusBadge(campaign.status)}
             </div>
             <p className="text-foreground-subtle mt-1">{campaign.subject}</p>

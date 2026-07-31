@@ -155,7 +155,7 @@ export default function NewCampaignPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Nueva campaña</h1>
+            <h1 className="text-3xl text-foreground">Nueva campaña</h1>
             <p className="text-foreground-subtle mt-1">Configura y envía tu campaña de email</p>
           </div>
         </div>
