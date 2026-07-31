@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -26,7 +28,7 @@ import {
   type DomainDetail,
 } from "@/components/domains/domain-records-dialog"
 import { DEFAULT_DOMAIN_REGION, DOMAIN_REGIONS } from "@/lib/domain-regions"
-import { Globe, Plus, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react"
+import { Globe, Plus, CheckCircle, XCircle, Clock, Loader2, Trash2 } from "lucide-react"
 
 interface Domain {
   id: string
@@ -63,6 +65,11 @@ export default function DomainsPage() {
   const [recordsOpen, setRecordsOpen] = useState(false)
   const [recordsDetail, setRecordsDetail] = useState<DomainDetail | null>(null)
   const [recordsLoading, setRecordsLoading] = useState(false)
+
+  // El dominio que se está por borrar. Nunca se borra al primer clic: la baja
+  // también lo saca de Resend y eso invalida los registros DNS ya cargados.
+  const [pendingDelete, setPendingDelete] = useState<Domain | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchDomains = useCallback(async () => {
     const res = await fetch("/api/domains")
@@ -128,6 +135,28 @@ export default function DomainsPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/domains/${pendingDelete.id}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "No se pudo borrar el dominio")
+
+      setPendingDelete(null)
+      fetchDomains()
+      toast.success(
+        data.removedFromResend
+          ? `${data.name} borrado acá y en Resend`
+          : `${data.name} borrado. En Resend no estaba, así que revísalo en su dashboard.`
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo borrar el dominio")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "VERIFIED":
@@ -145,7 +174,7 @@ export default function DomainsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Dominios</h1>
+          <h1 className="text-4xl text-foreground">Dominios</h1>
           <p className="text-foreground-muted mt-2 text-lg">Gestiona los dominios verificados para envío de emails</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -161,7 +190,7 @@ export default function DomainsPage() {
           </DialogTrigger>
           <DialogContent className="rounded-2xl border-border">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">Nuevo dominio</DialogTitle>
+              <DialogTitle className="text-xl text-foreground">Nuevo dominio</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-2">
               <div className="space-y-2">
@@ -226,13 +255,13 @@ export default function DomainsPage() {
       <div className="space-y-3">
         {domains.map((domain) => (
           <Card key={domain.id} className="border border-border bg-background-elev rounded-2xl shadow-none hover:border-border-strong transition-all">
-            <CardContent className="p-0">
-              {/* Toda la tarjeta abre la ficha de registros DNS, que es la
-                  única acción que tiene sentido sobre un dominio. */}
+            <CardContent className="p-0 flex items-stretch">
+              {/* La tarjeta abre la ficha de registros DNS; el botón de borrar
+                  va aparte para no anidar un <button> dentro de otro. */}
               <button
                 type="button"
                 onClick={() => openRecords(domain.id)}
-                className="w-full text-left p-5 rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="flex-1 min-w-0 text-left p-5 rounded-l-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -241,7 +270,7 @@ export default function DomainsPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-foreground text-sm">{domain.name}</h3>
+                        <h3 className="text-foreground text-lg">{domain.name}</h3>
                         {getStatusBadge(domain.status)}
                       </div>
                       <p className="text-sm text-foreground-subtle">{domain.organization?.name}</p>
@@ -256,6 +285,14 @@ export default function DomainsPage() {
                     <span className="text-xs text-foreground-subtle/60">Ver DNS</span>
                   </div>
                 </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingDelete(domain)}
+                aria-label={`Borrar ${domain.name}`}
+                className="px-5 rounded-r-2xl text-foreground-subtle/60 hover:text-danger hover:bg-danger/5 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
             </CardContent>
           </Card>
@@ -273,6 +310,44 @@ export default function DomainsPage() {
           </Card>
         )}
       </div>
+
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !deleting) setPendingDelete(null)
+        }}
+      >
+        <DialogContent className="rounded-2xl border-border">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-foreground">
+              ¿Borrar {pendingDelete?.name}?
+            </DialogTitle>
+            <DialogDescription>
+              Se da de baja también en Resend, así que los registros DNS que ya cargaste dejan de
+              servir: si más adelante vuelves a agregar el dominio, Resend genera otro DKIM y hay
+              que editar la zona de nuevo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setPendingDelete(null)}
+              disabled={deleting}
+              className="h-11 rounded-xl text-sm font-medium"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="h-11 bg-danger hover:bg-danger/90 text-white rounded-xl text-sm font-medium gap-2"
+            >
+              {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {deleting ? "Borrando…" : "Borrar dominio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DomainRecordsDialog
         open={recordsOpen}
