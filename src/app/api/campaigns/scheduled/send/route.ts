@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getResendClient } from "@/lib/resend"
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,9 +37,8 @@ export async function GET(req: NextRequest) {
           data: { status: "SENDING" },
         })
 
-        // Import Resend dynamically to avoid edge runtime issues
-        const { Resend } = await import("resend")
-        const resend = new Resend(process.env.RESEND_API_KEY || "")
+        // Cada campaña sale por la cuenta de Resend de su propio cliente.
+        const resend = await getResendClient(campaign.organizationId)
 
         const contacts = campaign.contactList?.members
           .map((m) => m.contact)

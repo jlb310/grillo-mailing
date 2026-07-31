@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Building2, Plus, Users, Globe, Send } from "lucide-react"
 import Link from "next/link"
+import { ResendCredentialsDialog } from "@/components/organizations/resend-credentials-dialog"
 
 export default async function OrganizationsPage() {
   const session = await getServerSession(authOptions)
@@ -14,9 +15,16 @@ export default async function OrganizationsPage() {
     redirect("/dashboard")
   }
 
+  // `select` explícito para no arrastrar las credenciales cifradas del cliente
+  // hasta acá: de esta página solo salen booleanos hacia el componente cliente.
   const organizations = await prisma.organization.findMany({
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      resendApiKey: true,
+      resendWebhookSecret: true,
       _count: {
         select: {
           users: true,
@@ -56,19 +64,27 @@ export default async function OrganizationsPage() {
                     <p className="text-sm text-foreground-subtle">{org.slug}</p>
                   </div>
                 </div>
-                <div className="flex gap-4 text-sm text-foreground-subtle">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" />
-                    <span>{org._count.users}</span>
+                <div className="flex items-center gap-5">
+                  <div className="flex gap-4 text-sm text-foreground-subtle">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>{org._count.users}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>{org._count.domains}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{org._count.campaigns}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>{org._count.domains}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{org._count.campaigns}</span>
-                  </div>
+                  <ResendCredentialsDialog
+                    organizationId={org.id}
+                    organizationName={org.name}
+                    hasApiKey={Boolean(org.resendApiKey)}
+                    hasWebhookSecret={Boolean(org.resendWebhookSecret)}
+                  />
                 </div>
               </div>
             </CardContent>

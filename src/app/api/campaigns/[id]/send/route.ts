@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Resend } from "resend"
+import { getResendClient } from "@/lib/resend"
 
 export async function POST(
   req: NextRequest,
@@ -73,7 +73,9 @@ export async function POST(
     // Note: Resend free tier allows up to 100 emails/day. For larger lists, use batch API or queue.
     const results = []
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
-    const resend = new Resend(process.env.RESEND_API_KEY || "")
+    // Desde la cuenta de Resend de este cliente: es la única donde su dominio
+    // está verificado.
+    const resend = await getResendClient(campaign.organizationId)
 
     for (const contact of contacts) {
       try {

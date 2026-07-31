@@ -1,10 +1,60 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { EventType } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
+import { decryptSecret } from "@/lib/crypto"
+import { readSignatureHeaders, verifySignature } from "@/lib/webhook-signature"
+
+/**
+ * Secretos de firma con los que puede venir un evento: el de la cuenta global
+ * de la agencia y el de cada cliente que tenga cuenta propia.
+ */
+async function collectWebhookSecrets(): Promise<string[]> {
+  const secrets: string[] = []
+
+  const global = process.env.RESEND_WEBHOOK_SECRET
+  if (global) secrets.push(global)
+
+  const orgs = await prisma.organization.findMany({
+    where: { resendWebhookSecret: { not: null } },
+    select: { resendWebhookSecret: true },
+  })
+
+  for (const org of orgs) {
+    try {
+      secrets.push(decryptSecret(org.resendWebhookSecret!))
+    } catch {
+      // Secreto ilegible (típicamente por rotación de ENCRYPTION_KEY): se
+      // ignora, y los eventos de esa cuenta quedarán rechazados hasta que lo
+      // vuelvan a pegar. Preferimos eso a aceptar sin verificar.
+    }
+  }
+
+  return secrets
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    
+    // Texto crudo: la firma se calcula sobre los bytes exactos que llegaron.
+    const raw = await req.text()
+    const secrets = await collectWebhookSecrets()
+
+    // Sin secreto no hay contra qué verificar, así que no se procesa nada.
+    // Aceptar "mientras tanto" dejaría a cualquiera inventando aperturas y
+    // rebotes; preferimos perder eventos —Resend los reintenta— antes que
+    // guardar métricas que alguien pudo fabricar.
+    if (secrets.length === 0) {
+      console.error(
+        "[webhooks/resend] evento rechazado: falta RESEND_WEBHOOK_SECRET (o el secreto de la organización)"
+      )
+      return NextResponse.json({ error: "Webhook sin secreto configurado" }, { status: 503 })
+    }
+
+    if (!verifySignature({ headers: readSignatureHeaders(req.headers), body: raw, secrets })) {
+      return NextResponse.json({ error: "Firma inválida" }, { status: 401 })
+    }
+
+    const body = JSON.parse(raw)
+
     // Resend webhook payload structure
     // https://resend.com/docs/dashboard/webhooks
     const events = Array.isArray(body) ? body : [body]
@@ -36,7 +86,7 @@ export async function POST(req: NextRequest) {
         where: { email: data.to[0] },
       })
 
-      const eventTypeMap: Record<string, string> = {
+      const eventTypeMap: Record<string, EventType> = {
         "email.sent": "DELIVERED",
         "email.delivered": "DELIVERED",
         "email.opened": "OPENED",
@@ -47,11 +97,17 @@ export async function POST(req: NextRequest) {
         "email.dropped": "DROPPED",
       }
 
-      const mappedType = eventTypeMap[type] || type
+      const mappedType = eventTypeMap[type]
+      // Un tipo que no conocemos no entra a la tabla: la columna es un enum y
+      // el insert reventaría igual, solo que con un 500 en vez de un aviso.
+      if (!mappedType) {
+        console.warn(`[webhooks/resend] tipo de evento no soportado: ${type}`)
+        continue
+      }
 
       await prisma.emailEvent.create({
         data: {
-          type: mappedType as any,
+          type: mappedType,
           email: data.to[0],
           timestamp: new Date(data.created_at || Date.now()),
           ip: data.click?.ip || null,

@@ -9,16 +9,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // `select` explícito, no `include`: con include se irían al navegador las
+  // columnas resendApiKey/resendWebhookSecret. Van cifradas, pero un secreto
+  // cifrado tampoco tiene nada que hacer en el cliente.
   const organizations = await prisma.organization.findMany({
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      logo: true,
+      brandColor: true,
+      createdAt: true,
+      updatedAt: true,
+      resendApiKey: true,
+      resendWebhookSecret: true,
       _count: {
         select: { users: true, domains: true, campaigns: true }
       }
     }
   })
 
-  return NextResponse.json(organizations)
+  return NextResponse.json(
+    organizations.map(({ resendApiKey, resendWebhookSecret, ...org }) => ({
+      ...org,
+      hasResendApiKey: Boolean(resendApiKey),
+      hasResendWebhookSecret: Boolean(resendWebhookSecret),
+    }))
+  )
 }
 
 export async function POST(req: NextRequest) {

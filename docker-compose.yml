@@ -13,6 +13,10 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_WEBHOOK_SECRET=${RESEND_WEBHOOK_SECRET}
+      # Cifra las credenciales de Resend que cada cliente pega en la app.
+      # Si se pierde o se cambia, hay que volver a pegarlas todas.
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       # Password del admin en el seed inicial. Si no se define, el seed genera
       # una clave aleatoria y la imprime en los logs del contenedor.
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}

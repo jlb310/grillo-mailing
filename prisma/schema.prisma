@@ -103,6 +103,11 @@ model Organization {
   description String?
   logo        String?
   brandColor  String?   @default("#171717")
+  // Cuenta de Resend propia del cliente. Ambos van CIFRADOS (lib/crypto):
+  // nunca se guardan ni se devuelven en claro. Si están vacíos, la
+  // organización usa la cuenta global de la agencia (RESEND_API_KEY).
+  resendApiKey        String?
+  resendWebhookSecret String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   users       User[]

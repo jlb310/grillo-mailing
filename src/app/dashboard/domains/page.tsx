@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useCallback, useEffect, useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Globe, Plus, CheckCircle, XCircle, Clock } from "lucide-react"
+import { toast } from "sonner"
+import {
+  DomainRecordsDialog,
+  type DomainDetail,
+} from "@/components/domains/domain-records-dialog"
+import { DEFAULT_DOMAIN_REGION, DOMAIN_REGIONS } from "@/lib/domain-regions"
+import { Globe, Plus, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react"
 
 interface Domain {
   id: string
@@ -38,44 +44,87 @@ interface Organization {
   name: string
 }
 
+const EMPTY_FORM = {
+  name: "",
+  organizationId: "",
+  region: DEFAULT_DOMAIN_REGION as string,
+}
+
 export default function DomainsPage() {
   const [domains, setDomains] = useState<Domain[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState({ name: "", organizationId: "" })
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState(EMPTY_FORM)
 
-  useEffect(() => {
-    fetchDomains()
-    fetchOrganizations()
-  }, [])
+  // Ficha de registros DNS: se abre sola al dar de alta (reusando lo que
+  // devolvió el alta) y a mano al pulsar una tarjeta (pidiéndolo a Resend).
+  const [recordsOpen, setRecordsOpen] = useState(false)
+  const [recordsDetail, setRecordsDetail] = useState<DomainDetail | null>(null)
+  const [recordsLoading, setRecordsLoading] = useState(false)
 
-  const fetchDomains = async () => {
+  const fetchDomains = useCallback(async () => {
     const res = await fetch("/api/domains")
     const data = await res.json()
     setDomains(data)
     setLoading(false)
-  }
+  }, [])
 
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     const res = await fetch("/api/organizations")
     if (res.ok) {
       const data = await res.json()
       setOrganizations(data)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchDomains()
+    fetchOrganizations()
+  }, [fetchDomains, fetchOrganizations])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const res = await fetch("/api/domains", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    })
-    if (res.ok) {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/domains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "No se pudo crear el dominio")
+
       setOpen(false)
-      setFormData({ name: "", organizationId: "" })
+      setFormData(EMPTY_FORM)
       fetchDomains()
+
+      // El alta ya trae los registros DNS: los mostramos de inmediato, que es
+      // lo único que el usuario necesita hacer a continuación.
+      setRecordsDetail({ ...data, linkedToResend: true })
+      setRecordsOpen(true)
+      toast.success(`${data.domain.name} dado de alta en Resend`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo crear el dominio")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openRecords = async (domainId: string) => {
+    setRecordsDetail(null)
+    setRecordsOpen(true)
+    setRecordsLoading(true)
+    try {
+      const res = await fetch(`/api/domains/${domainId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "No se pudo cargar el dominio")
+      setRecordsDetail(data)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo cargar el dominio")
+    } finally {
+      setRecordsLoading(false)
     }
   }
 
@@ -142,8 +191,32 @@ export default function DomainsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium">
-                Guardar dominio
+              <div className="space-y-2">
+                <Label htmlFor="region" className="text-sm text-foreground-muted">Región de envío</Label>
+                <Select
+                  value={formData.region}
+                  onValueChange={(value) => setFormData({ ...formData, region: value as string })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {DOMAIN_REGIONS.map((region) => (
+                      <SelectItem key={region.value} value={region.value}>{region.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-foreground-subtle">
+                  No se puede cambiar después. Para clientes en Chile, São Paulo.
+                </p>
+              </div>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="w-full h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving ? "Dando de alta en Resend…" : "Guardar dominio"}
               </Button>
             </form>
           </DialogContent>
@@ -153,28 +226,37 @@ export default function DomainsPage() {
       <div className="space-y-3">
         {domains.map((domain) => (
           <Card key={domain.id} className="border border-border bg-background-elev rounded-2xl shadow-none hover:border-border-strong transition-all">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 bg-background-muted rounded-xl flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-foreground-muted" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-foreground text-sm">{domain.name}</h3>
-                      {getStatusBadge(domain.status)}
+            <CardContent className="p-0">
+              {/* Toda la tarjeta abre la ficha de registros DNS, que es la
+                  única acción que tiene sentido sobre un dominio. */}
+              <button
+                type="button"
+                onClick={() => openRecords(domain.id)}
+                className="w-full text-left p-5 rounded-2xl cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-background-muted rounded-xl flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-foreground-muted" />
                     </div>
-                    <p className="text-sm text-foreground-subtle">{domain.organization?.name}</p>
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-foreground text-sm">{domain.name}</h3>
+                        {getStatusBadge(domain.status)}
+                      </div>
+                      <p className="text-sm text-foreground-subtle">{domain.organization?.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded-lg ${domain.spfVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>SPF</span>
+                      <span className={`px-2 py-1 rounded-lg ${domain.dkimVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>DKIM</span>
+                      <span className={`px-2 py-1 rounded-lg ${domain.dmarcVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>DMARC</span>
+                    </div>
+                    <span className="text-xs text-foreground-subtle/60">Ver DNS</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-2 text-xs">
-                    <span className={`px-2 py-1 rounded-lg ${domain.spfVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>SPF</span>
-                    <span className={`px-2 py-1 rounded-lg ${domain.dkimVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>DKIM</span>
-                    <span className={`px-2 py-1 rounded-lg ${domain.dmarcVerified ? "bg-success/10 text-success" : "bg-background-muted text-foreground-subtle/60"}`}>DMARC</span>
-                  </div>
-                </div>
-              </div>
+              </button>
             </CardContent>
           </Card>
         ))}
@@ -191,6 +273,18 @@ export default function DomainsPage() {
           </Card>
         )}
       </div>
+
+      <DomainRecordsDialog
+        open={recordsOpen}
+        onOpenChange={(isOpen) => {
+          setRecordsOpen(isOpen)
+          if (!isOpen) setRecordsDetail(null)
+        }}
+        detail={recordsDetail}
+        loading={recordsLoading}
+        onDetailChange={setRecordsDetail}
+        onSynced={fetchDomains}
+      />
     </div>
   )
 }
