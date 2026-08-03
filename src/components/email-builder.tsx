@@ -32,7 +32,7 @@ export interface EmailBlock {
   content: Record<string, any>
 }
 
-const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, any>> = {
+const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
   header: {
     logoUrl: "",
     logoText: "Tu Logo",
@@ -96,6 +96,19 @@ const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, any>> = {
     gap: 20,
     bgColor: "#ffffff",
     padding: 20,
+  },
+  product: {
+    imageSrc: "",
+    imageAlt: "Producto",
+    name: "Nombre del producto",
+    description: "$0.00",
+    buttonText: "Comprar",
+    buttonUrl: "https://",
+    buttonBgColor: "#3fa844",
+    buttonTextColor: "#ffffff",
+    align: "center",
+    padding: 20,
+    borderRadius: 8,
   },
 }
 
@@ -182,6 +195,15 @@ function renderBlockToHTML(block: EmailBlock): string {
         }
         if (sub.type === "button") {
           return `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;"><tr><td align="center" style="background-color:${sc.bgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:${sc.padding || 12}px 24px;"><a href="${sc.url || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.textColor || "#fff"};font-size:${sc.fontSize || 16}px;font-weight:600;font-family:system-ui,sans-serif;">${sc.text || "Botón"}</a></td></tr></table>`
+        }
+        if (sub.type === "product") {
+          const img = sc.imageSrc
+            ? `<img src="${sc.imageSrc}" alt="${sc.imageAlt || ""}" style="width:100%;max-width:100%;height:auto;border-radius:${sc.borderRadius || 8}px;display:block;margin-bottom:12px;" />`
+            : `<div style="width:100%;height:160px;background:#f5f5f5;border-radius:${sc.borderRadius || 8}px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:14px;color:#a3a3a3;">Sin imagen</div>`
+          const name = `<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#1a1a1a;font-family:system-ui,sans-serif;">${sc.name || "Producto"}</h3>`
+          const desc = sc.description ? `<p style="margin:0 0 14px;font-size:14px;color:#525252;font-family:system-ui,sans-serif;">${sc.description}</p>` : ""
+          const btn = `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;"><tr><td align="center" style="background-color:${sc.buttonBgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:12px 24px;"><a href="${sc.buttonUrl || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.buttonTextColor || "#ffffff"};font-size:16px;font-weight:600;font-family:system-ui,sans-serif;">${sc.buttonText || "Comprar"}</a></td></tr></table>`
+          return `<div style="text-align:${sc.align || "center"};">${img}${name}${desc}${btn}</div>`
         }
         return ""
       }
@@ -460,13 +482,15 @@ function BlockProperties({
 
   const columnTypeField = (side: "left" | "right") => {
     const sub = c[side] || { type: "text", content: {} }
-    const setSub = (type: "text" | "image" | "button") => {
+    const setSub = (type: "text" | "image" | "button" | "product") => {
       const defaults: Record<string, any> =
         type === "text"
           ? { text: "Texto...", align: "left", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 }
           : type === "image"
           ? { src: "", alt: "", align: "center", width: "100%", borderRadius: 0 }
-          : { text: "Botón", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#fff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false }
+          : type === "button"
+          ? { text: "Botón", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#fff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false }
+          : { imageSrc: "", imageAlt: "Producto", name: "Nombre del producto", description: "$0.00", buttonText: "Comprar", buttonUrl: "https://", buttonBgColor: "#3fa844", buttonTextColor: "#ffffff", align: "center", borderRadius: 8 }
       onChange({ ...c, [side]: { type, content: { ...defaults, ...sub.content } } })
     }
 
@@ -479,7 +503,7 @@ function BlockProperties({
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-foreground-subtle uppercase">{side === "left" ? "Izquierda" : "Derecha"}</span>
           <div className="flex gap-1">
-            {(["text", "image", "button"] as const).map((t) => (
+            {(["text", "image", "button", "product"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setSub(t)}
@@ -487,7 +511,7 @@ function BlockProperties({
                   sub.type === t ? "bg-primary text-primary-foreground" : "bg-background-muted text-foreground-muted hover:bg-background-elev"
                 }`}
               >
-                {t}
+                {t === "product" ? "producto" : t}
               </button>
             ))}
           </div>
@@ -516,6 +540,19 @@ function BlockProperties({
             <div className="grid grid-cols-2 gap-2">
               <Input type="color" value={sub.content?.bgColor || "#3fa844"} onChange={(e) => updateSubContent({ bgColor: e.target.value })} className="h-7 text-xs p-1" />
               <Input type="color" value={sub.content?.textColor || "#fff"} onChange={(e) => updateSubContent({ textColor: e.target.value })} className="h-7 text-xs p-1" />
+            </div>
+          </>
+        )}
+        {sub.type === "product" && (
+          <>
+            <ImageUploadField value={sub.content?.imageSrc || ""} onChange={(imageSrc) => updateSubContent({ imageSrc })} />
+            <Input value={sub.content?.name || ""} onChange={(e) => updateSubContent({ name: e.target.value })} className="h-7 text-xs" placeholder="Nombre del producto" />
+            <Input value={sub.content?.description || ""} onChange={(e) => updateSubContent({ description: e.target.value })} className="h-7 text-xs" placeholder="Precio o descripción" />
+            <Input value={sub.content?.buttonText || ""} onChange={(e) => updateSubContent({ buttonText: e.target.value })} className="h-7 text-xs" placeholder="Texto del botón" />
+            <Input value={sub.content?.buttonUrl || ""} onChange={(e) => updateSubContent({ buttonUrl: e.target.value })} className="h-7 text-xs" placeholder="URL del botón" />
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="color" value={sub.content?.buttonBgColor || "#3fa844"} onChange={(e) => updateSubContent({ buttonBgColor: e.target.value })} className="h-7 text-xs p-1" />
+              <Input type="color" value={sub.content?.buttonTextColor || "#fff"} onChange={(e) => updateSubContent({ buttonTextColor: e.target.value })} className="h-7 text-xs p-1" />
             </div>
           </>
         )}
@@ -758,6 +795,25 @@ function BlockPreview({ block }: { block: EmailBlock }) {
             >
               {sc.text || "Botón"}
             </span>
+          )
+        }
+        if (sub.type === "product") {
+          return (
+            <div className="space-y-2" style={{ textAlign: sc.align || "center" }}>
+              {sc.imageSrc ? (
+                <img src={sc.imageSrc} alt={sc.imageAlt || ""} className="w-full h-auto" style={{ borderRadius: sc.borderRadius || 8 }} />
+              ) : (
+                <div className="w-full h-20 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs">Sin imagen</div>
+              )}
+              <h4 className="font-semibold text-sm m-0">{sc.name || "Producto"}</h4>
+              {sc.description && <p className="text-xs text-foreground-subtle m-0">{sc.description}</p>}
+              <span
+                className="inline-block font-semibold text-xs"
+                style={{ backgroundColor: sc.buttonBgColor || "#3fa844", color: sc.buttonTextColor || "#fff", padding: "6px 12px", borderRadius: sc.borderRadius || 8 }}
+              >
+                {sc.buttonText || "Comprar"}
+              </span>
+            </div>
           )
         }
         return null
