@@ -84,14 +84,16 @@ const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
     unsubscribeText: "Darse de baja",
   },
   "column-2": {
-    left: {
-      type: "text",
-      content: { text: "Columna izquierda", align: "left", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 },
-    },
-    right: {
-      type: "text",
-      content: { text: "Columna derecha", align: "left", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 },
-    },
+    left: [
+      { type: "image", content: { src: "", alt: "", align: "center", width: "100%", borderRadius: 8 } },
+      { type: "text", content: { text: "Nombre del producto\n$0.00", align: "center", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 } },
+      { type: "button", content: { text: "Comprar", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#ffffff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false } },
+    ],
+    right: [
+      { type: "image", content: { src: "", alt: "", align: "center", width: "100%", borderRadius: 8 } },
+      { type: "text", content: { text: "Nombre del producto\n$0.00", align: "center", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 } },
+      { type: "button", content: { text: "Comprar", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#ffffff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false } },
+    ],
     ratio: "50/50",
     gap: 20,
     bgColor: "#ffffff",
@@ -181,42 +183,35 @@ function renderBlockToHTML(block: EmailBlock): string {
 
     case "column-2": {
       const ratios = c.ratio === "33/66" ? ["33%", "67%"] : c.ratio === "66/33" ? ["67%", "33%"] : ["50%", "50%"]
-      const left = c.left || { type: "text", content: { text: "" } }
-      const right = c.right || { type: "text", content: { text: "" } }
+      const left = Array.isArray(c.left) ? c.left : []
+      const right = Array.isArray(c.right) ? c.right : []
       
       const renderSub = (sub: any) => {
         if (!sub) return ""
         const sc = sub.content || {}
         if (sub.type === "text") {
-          return `<p style="margin:0;font-size:${sc.fontSize || 16}px;line-height:${sc.lineHeight || 1.6};color:${sc.color || "#1a1a1a"};font-family:system-ui,sans-serif;">${(sc.text || "").replace(/\n/g, "<br>")}</p>`
+          return `<p style="margin:0 0 12px;font-size:${sc.fontSize || 16}px;line-height:${sc.lineHeight || 1.6};color:${sc.color || "#1a1a1a"};font-family:system-ui,sans-serif;">${(sc.text || "").replace(/\n/g, "<br>")}</p>`
         }
         if (sub.type === "image") {
-          return `<img src="${sc.src || ""}" alt="${sc.alt || ""}" style="width:100%;max-width:100%;height:auto;border-radius:${sc.borderRadius || 0}px;display:block;" />`
+          return `<img src="${sc.src || ""}" alt="${sc.alt || ""}" style="width:100%;max-width:100%;height:auto;border-radius:${sc.borderRadius || 0}px;display:block;margin-bottom:12px;" />`
         }
         if (sub.type === "button") {
-          return `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;"><tr><td align="center" style="background-color:${sc.bgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:${sc.padding || 12}px 24px;"><a href="${sc.url || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.textColor || "#fff"};font-size:${sc.fontSize || 16}px;font-weight:600;font-family:system-ui,sans-serif;">${sc.text || "Botón"}</a></td></tr></table>`
-        }
-        if (sub.type === "product") {
-          const img = sc.imageSrc
-            ? `<img src="${sc.imageSrc}" alt="${sc.imageAlt || ""}" style="width:100%;max-width:100%;height:auto;border-radius:${sc.borderRadius || 8}px;display:block;margin-bottom:12px;" />`
-            : `<div style="width:100%;height:160px;background:#f5f5f5;border-radius:${sc.borderRadius || 8}px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:14px;color:#a3a3a3;">Sin imagen</div>`
-          const name = `<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#1a1a1a;font-family:system-ui,sans-serif;">${sc.name || "Producto"}</h3>`
-          const desc = sc.description ? `<p style="margin:0 0 14px;font-size:14px;color:#525252;font-family:system-ui,sans-serif;">${sc.description}</p>` : ""
-          const btn = `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;"><tr><td align="center" style="background-color:${sc.buttonBgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:12px 24px;"><a href="${sc.buttonUrl || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.buttonTextColor || "#ffffff"};font-size:16px;font-weight:600;font-family:system-ui,sans-serif;">${sc.buttonText || "Comprar"}</a></td></tr></table>`
-          return `<div style="text-align:${sc.align || "center"};">${img}${name}${desc}${btn}</div>`
+          return `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;margin-bottom:12px;"><tr><td align="center" style="background-color:${sc.bgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:${sc.padding || 12}px 24px;"><a href="${sc.url || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.textColor || "#fff"};font-size:${sc.fontSize || 16}px;font-weight:600;font-family:system-ui,sans-serif;">${sc.text || "Botón"}</a></td></tr></table>`
         }
         return ""
       }
+
+      const renderColumn = (subs: any[]) => subs.map(renderSub).join("")
 
       return `<tr>
         <td style="padding:${c.padding}px;background-color:${c.bgColor};">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td width="${ratios[0]}" valign="top" style="padding-right:${c.gap / 2}px;">
-                ${renderSub(left)}
+                ${renderColumn(left)}
               </td>
               <td width="${ratios[1]}" valign="top" style="padding-left:${c.gap / 2}px;">
-                ${renderSub(right)}
+                ${renderColumn(right)}
               </td>
             </tr>
           </table>
@@ -260,8 +255,13 @@ export function generateTextVersion(blocks: EmailBlock[]): string {
       if (b.type === "footer") return b.content.text
       if (b.type === "header") return b.content.logoText
       if (b.type === "column-2") {
-        const left = b.content.left?.content?.text || ""
-        const right = b.content.right?.content?.text || ""
+        const extractText = (subs: any[]) =>
+          subs
+            .filter((s: any) => s?.type === "text" || s?.type === "button")
+            .map((s: any) => (s.type === "button" ? `${s.content?.text || ""}: ${s.content?.url || ""}` : s.content?.text || ""))
+            .join("\n")
+        const left = Array.isArray(b.content.left) ? extractText(b.content.left) : ""
+        const right = Array.isArray(b.content.right) ? extractText(b.content.right) : ""
         return `${left}\n${right}`
       }
       return ""
@@ -481,81 +481,104 @@ function BlockProperties({
   )
 
   const columnTypeField = (side: "left" | "right") => {
-    const sub = c[side] || { type: "text", content: {} }
-    const setSub = (type: "text" | "image" | "button" | "product") => {
+    const subs: any[] = Array.isArray(c[side]) ? c[side] : []
+    const setSubs = (newSubs: any[]) => onChange({ ...c, [side]: newSubs })
+
+    const addSub = (type: "text" | "image" | "button") => {
       const defaults: Record<string, any> =
         type === "text"
-          ? { text: "Texto...", align: "left", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 }
+          ? { text: "Texto...", align: "center", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 }
           : type === "image"
-          ? { src: "", alt: "", align: "center", width: "100%", borderRadius: 0 }
-          : type === "button"
-          ? { text: "Botón", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#fff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false }
-          : { imageSrc: "", imageAlt: "Producto", name: "Nombre del producto", description: "$0.00", buttonText: "Comprar", buttonUrl: "https://", buttonBgColor: "#3fa844", buttonTextColor: "#ffffff", align: "center", borderRadius: 8 }
-      onChange({ ...c, [side]: { type, content: { ...defaults, ...sub.content } } })
+          ? { src: "", alt: "", align: "center", width: "100%", borderRadius: 8 }
+          : { text: "Comprar", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#fff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false }
+      setSubs([...subs, { type, content: defaults }])
     }
 
-    const updateSubContent = (content: Record<string, any>) => {
-      onChange({ ...c, [side]: { ...sub, content: { ...sub.content, ...content } } })
+    const removeSub = (index: number) => {
+      const next = [...subs]
+      next.splice(index, 1)
+      setSubs(next)
+    }
+
+    const moveSub = (index: number, dir: -1 | 1) => {
+      const next = [...subs]
+      const target = index + dir
+      if (target < 0 || target >= next.length) return
+      ;[next[index], next[target]] = [next[target], next[index]]
+      setSubs(next)
+    }
+
+    const updateSub = (index: number, content: Record<string, any>) => {
+      const next = [...subs]
+      next[index] = { ...next[index], content: { ...next[index].content, ...content } }
+      setSubs(next)
+    }
+
+    const renderSubEditor = (sub: any, index: number) => {
+      const sc = sub.content || {}
+      return (
+        <div key={index} className="border border-border rounded-lg p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-foreground-subtle uppercase">{sub.type}</span>
+            <div className="flex gap-1">
+              <button onClick={() => moveSub(index, -1)} disabled={index === 0} className="px-1.5 py-0.5 rounded text-[10px] bg-background-muted text-foreground-muted hover:bg-background-elev disabled:opacity-30">↑</button>
+              <button onClick={() => moveSub(index, 1)} disabled={index === subs.length - 1} className="px-1.5 py-0.5 rounded text-[10px] bg-background-muted text-foreground-muted hover:bg-background-elev disabled:opacity-30">↓</button>
+              <button onClick={() => removeSub(index)} className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-600 hover:bg-red-200">×</button>
+            </div>
+          </div>
+          {sub.type === "text" && (
+            <>
+              <Textarea
+                value={sc.text || ""}
+                onChange={(e) => updateSub(index, { text: e.target.value })}
+                rows={2}
+                className="rounded-lg border-border text-sm resize-none"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="number" value={sc.fontSize || 16} onChange={(e) => updateSub(index, { fontSize: Number(e.target.value) })} className="h-7 text-xs" placeholder="Tamaño" />
+                <Input type="color" value={sc.color || "#1a1a1a"} onChange={(e) => updateSub(index, { color: e.target.value })} className="h-7 text-xs p-1" />
+              </div>
+            </>
+          )}
+          {sub.type === "image" && (
+            <ImageUploadField value={sc.src || ""} onChange={(src) => updateSub(index, { src })} />
+          )}
+          {sub.type === "button" && (
+            <>
+              <Input value={sc.text || ""} onChange={(e) => updateSub(index, { text: e.target.value })} className="h-7 text-xs" placeholder="Texto" />
+              <Input value={sc.url || ""} onChange={(e) => updateSub(index, { url: e.target.value })} className="h-7 text-xs" placeholder="URL" />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="color" value={sc.bgColor || "#3fa844"} onChange={(e) => updateSub(index, { bgColor: e.target.value })} className="h-7 text-xs p-1" />
+                <Input type="color" value={sc.textColor || "#fff"} onChange={(e) => updateSub(index, { textColor: e.target.value })} className="h-7 text-xs p-1" />
+              </div>
+            </>
+          )}
+        </div>
+      )
     }
 
     return (
-      <div className="space-y-2 border border-border rounded-lg p-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-foreground-subtle uppercase">{side === "left" ? "Izquierda" : "Derecha"}</span>
           <div className="flex gap-1">
-            {(["text", "image", "button", "product"] as const).map((t) => (
+            {(["text", "image", "button"] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setSub(t)}
-                className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize transition-all ${
-                  sub.type === t ? "bg-primary text-primary-foreground" : "bg-background-muted text-foreground-muted hover:bg-background-elev"
-                }`}
+                onClick={() => addSub(t)}
+                className="px-2 py-0.5 rounded text-[10px] font-medium capitalize bg-background-muted text-foreground-muted hover:bg-background-elev transition-all"
               >
-                {t === "product" ? "producto" : t}
+                + {t}
               </button>
             ))}
           </div>
         </div>
-        {sub.type === "text" && (
-          <>
-            <Textarea
-              value={sub.content?.text || ""}
-              onChange={(e) => updateSubContent({ text: e.target.value })}
-              rows={3}
-              className="rounded-lg border-border text-sm resize-none"
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="number" value={sub.content?.fontSize || 16} onChange={(e) => updateSubContent({ fontSize: Number(e.target.value) })} className="h-7 text-xs" placeholder="Tamaño" />
-              <Input type="color" value={sub.content?.color || "#1a1a1a"} onChange={(e) => updateSubContent({ color: e.target.value })} className="h-7 text-xs p-1" />
-            </div>
-          </>
-        )}
-        {sub.type === "image" && (
-          <ImageUploadField value={sub.content?.src || ""} onChange={(src) => updateSubContent({ src })} />
-        )}
-        {sub.type === "button" && (
-          <>
-            <Input value={sub.content?.text || ""} onChange={(e) => updateSubContent({ text: e.target.value })} className="h-7 text-xs" placeholder="Texto" />
-            <Input value={sub.content?.url || ""} onChange={(e) => updateSubContent({ url: e.target.value })} className="h-7 text-xs" placeholder="URL" />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="color" value={sub.content?.bgColor || "#3fa844"} onChange={(e) => updateSubContent({ bgColor: e.target.value })} className="h-7 text-xs p-1" />
-              <Input type="color" value={sub.content?.textColor || "#fff"} onChange={(e) => updateSubContent({ textColor: e.target.value })} className="h-7 text-xs p-1" />
-            </div>
-          </>
-        )}
-        {sub.type === "product" && (
-          <>
-            <ImageUploadField value={sub.content?.imageSrc || ""} onChange={(imageSrc) => updateSubContent({ imageSrc })} />
-            <Input value={sub.content?.name || ""} onChange={(e) => updateSubContent({ name: e.target.value })} className="h-7 text-xs" placeholder="Nombre del producto" />
-            <Input value={sub.content?.description || ""} onChange={(e) => updateSubContent({ description: e.target.value })} className="h-7 text-xs" placeholder="Precio o descripción" />
-            <Input value={sub.content?.buttonText || ""} onChange={(e) => updateSubContent({ buttonText: e.target.value })} className="h-7 text-xs" placeholder="Texto del botón" />
-            <Input value={sub.content?.buttonUrl || ""} onChange={(e) => updateSubContent({ buttonUrl: e.target.value })} className="h-7 text-xs" placeholder="URL del botón" />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="color" value={sub.content?.buttonBgColor || "#3fa844"} onChange={(e) => updateSubContent({ buttonBgColor: e.target.value })} className="h-7 text-xs p-1" />
-              <Input type="color" value={sub.content?.buttonTextColor || "#fff"} onChange={(e) => updateSubContent({ buttonTextColor: e.target.value })} className="h-7 text-xs p-1" />
-            </div>
-          </>
-        )}
+        <div className="space-y-2">
+          {subs.map(renderSubEditor)}
+          {subs.length === 0 && (
+            <p className="text-xs text-foreground-subtle italic">Vacío — agrega un bloque</p>
+          )}
+        </div>
       </div>
     )
   }
@@ -774,46 +797,27 @@ function BlockPreview({ block }: { block: EmailBlock }) {
     }
 
     case "column-2": {
-      const left = c.left || { type: "text", content: { text: "" } }
-      const right = c.right || { type: "text", content: { text: "" } }
+      const left: any[] = Array.isArray(c.left) ? c.left : []
+      const right: any[] = Array.isArray(c.right) ? c.right : []
       const ratios = c.ratio === "33/66" ? ["33%", "67%"] : c.ratio === "66/33" ? ["67%", "33%"] : ["50%", "50%"]
 
       const renderSubPreview = (sub: any) => {
         if (!sub) return null
         const sc = sub.content || {}
         if (sub.type === "text") {
-          return <p style={{ margin: 0, fontSize: sc.fontSize || 16, lineHeight: sc.lineHeight || 1.6, color: sc.color || "#1a1a1a" }}>{sc.text || ""}</p>
+          return <p style={{ margin: "0 0 8px", fontSize: sc.fontSize || 16, lineHeight: sc.lineHeight || 1.6, color: sc.color || "#1a1a1a" }}>{sc.text || ""}</p>
         }
         if (sub.type === "image") {
-          return sc.src ? <img src={sc.src} alt="" className="w-full h-auto" style={{ borderRadius: sc.borderRadius || 0 }} /> : <div className="w-full h-16 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs">Sin imagen</div>
+          return sc.src ? <img src={sc.src} alt="" className="w-full h-auto mb-2" style={{ borderRadius: sc.borderRadius || 0 }} /> : <div className="w-full h-16 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs mb-2">Sin imagen</div>
         }
         if (sub.type === "button") {
           return (
             <span
-              className="inline-block font-semibold"
+              className="inline-block font-semibold mb-2"
               style={{ backgroundColor: sc.bgColor || "#3fa844", color: sc.textColor || "#fff", padding: "8px 16px", borderRadius: sc.borderRadius || 8 }}
             >
               {sc.text || "Botón"}
             </span>
-          )
-        }
-        if (sub.type === "product") {
-          return (
-            <div className="space-y-2" style={{ textAlign: sc.align || "center" }}>
-              {sc.imageSrc ? (
-                <img src={sc.imageSrc} alt={sc.imageAlt || ""} className="w-full h-auto" style={{ borderRadius: sc.borderRadius || 8 }} />
-              ) : (
-                <div className="w-full h-20 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs">Sin imagen</div>
-              )}
-              <h4 className="font-semibold text-sm m-0">{sc.name || "Producto"}</h4>
-              {sc.description && <p className="text-xs text-foreground-subtle m-0">{sc.description}</p>}
-              <span
-                className="inline-block font-semibold text-xs"
-                style={{ backgroundColor: sc.buttonBgColor || "#3fa844", color: sc.buttonTextColor || "#fff", padding: "6px 12px", borderRadius: sc.borderRadius || 8 }}
-              >
-                {sc.buttonText || "Comprar"}
-              </span>
-            </div>
           )
         }
         return null
@@ -822,8 +826,8 @@ function BlockPreview({ block }: { block: EmailBlock }) {
       return (
         <div style={{ padding: c.padding, backgroundColor: c.bgColor }}>
           <div className="flex gap-4">
-            <div style={{ width: ratios[0] }}>{renderSubPreview(left)}</div>
-            <div style={{ width: ratios[1] }}>{renderSubPreview(right)}</div>
+            <div style={{ width: ratios[0] }}>{left.map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
+            <div style={{ width: ratios[1] }}>{right.map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
           </div>
         </div>
       )
