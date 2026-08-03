@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { UserRole } from "@prisma/client"
 import {
   DEFAULT_DOMAIN_REGION,
   ResendConfigError,
@@ -17,11 +18,12 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const isAdmin = session.user.role === "ADMIN"
-  const orgId = session.user.organizationId
+  const { searchParams } = new URL(req.url)
+  const requestedOrgId = searchParams.get("organizationId")
+  const effectiveOrgId = getEffectiveOrganizationId(session, requestedOrgId)
 
   const domains = await prisma.domain.findMany({
-    where: isAdmin ? {} : { organizationId: orgId! },
+    where: effectiveOrgId ? { organizationId: effectiveOrgId } : {},
     include: { organization: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   })
@@ -37,13 +39,13 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || session.user.role !== UserRole.SUPERADMIN) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {
     const body = await req.json()
-    const { organizationId } = body
+    const effectiveOrgId = getEffectiveOrganizationId(session, body.organizationId)
 
     const name = normalizeDomainName(String(body.name ?? ""))
     if (!name) {
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!organizationId) {
+    if (!effectiveOrgId) {
       return NextResponse.json({ error: "Falta la organización" }, { status: 400 })
     }
 
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // El dominio se da de alta en la cuenta de Resend de ESTE cliente, que es
     // la misma desde la que después saldrán sus campañas.
-    const resend = await getResendClient(organizationId)
+    const resend = await getResendClient(effectiveOrgId)
 
     // Si ya está en la cuenta lo adoptamos en vez de crearlo: puede haberse dado
     // de alta a mano en el dashboard, y entonces suele estar hasta verificado.
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
       const domain = await prisma.domain.create({
         data: {
           name,
-          organizationId,
+          organizationId: effectiveOrgId,
           resendDomainId: data.id,
           status: mapDomainStatus(data.status),
         },

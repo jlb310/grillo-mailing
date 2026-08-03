@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { UserRole } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -10,6 +11,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { name, subject, htmlContent, textContent, fromName, fromEmail, replyTo, domainId, contactListId, templateId, organizationId, scheduledAt, status } = body
+
+    if (session.user.role !== UserRole.SUPERADMIN && body.organizationId && body.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })
+    }
+
+    const effectiveOrgId = getEffectiveOrganizationId(session, body.organizationId)
+    if (!effectiveOrgId) {
+      return NextResponse.json({ error: "Falta la organización" }, { status: 400 })
+    }
 
     const campaign = await prisma.campaign.create({
       data: {
@@ -23,7 +33,7 @@ export async function POST(req: NextRequest) {
         domainId,
         contactListId,
         templateId,
-        organizationId: organizationId || session.user.organizationId!,
+        organizationId: effectiveOrgId,
         createdById: session.user.id,
         status: status || "DRAFT",
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,

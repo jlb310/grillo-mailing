@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,15 +24,21 @@ interface Campaign {
 }
 
 export default function CampaignsPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchCampaigns()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin])
 
   const fetchCampaigns = async () => {
-    const res = await fetch("/api/campaigns")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/campaigns?organizationId=${activeOrg}` : "/api/campaigns"
+    const res = await fetch(url)
     const data = await res.json()
     setCampaigns(data)
     setLoading(false)

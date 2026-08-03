@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { BarChart3, Mail, Eye, MousePointer, TrendingUp } from "lucide-react"
@@ -27,15 +28,21 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchAnalytics()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin])
 
   const fetchAnalytics = async () => {
-    const res = await fetch("/api/analytics")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/analytics?organizationId=${activeOrg}` : "/api/analytics"
+    const res = await fetch(url)
     const analyticsData = await res.json()
     setData(analyticsData)
     setLoading(false)

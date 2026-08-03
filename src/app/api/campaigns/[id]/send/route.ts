@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, canAccessOrganization } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getResendClient } from "@/lib/resend"
 
@@ -34,9 +34,8 @@ export async function POST(
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 })
     }
 
-    // Verify ownership
-    if (session.user.role !== "ADMIN" && campaign.organizationId !== session.user.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!canAccessOrganization(session, campaign.organizationId)) {
+      return NextResponse.json({ error: "No tienes acceso a esta campaña" }, { status: 403 })
     }
 
     if (campaign.status === "SENT" || campaign.status === "SENDING") {

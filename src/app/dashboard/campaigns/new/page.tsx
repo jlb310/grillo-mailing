@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +39,9 @@ interface ContactList {
 
 export default function NewCampaignPage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [templates, setTemplates] = useState<Template[]>([])
   const [domains, setDomains] = useState<Domain[]>([])
   const [lists, setLists] = useState<ContactList[]>([])
@@ -60,27 +64,33 @@ export default function NewCampaignPage() {
     scheduledAt: "",
   })
 
-  useEffect(() => {
-    Promise.all([fetchTemplates(), fetchDomains(), fetchLists()]).then(() => setLoading(false))
-  }, [])
-
-  const fetchTemplates = async () => {
-    const res = await fetch("/api/templates")
+  const fetchTemplates = useCallback(async () => {
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/templates?organizationId=${activeOrg}` : "/api/templates"
+    const res = await fetch(url)
     const data = await res.json()
     setTemplates(data)
-  }
+  }, [isSuperAdmin])
 
-  const fetchDomains = async () => {
-    const res = await fetch("/api/domains")
+  const fetchDomains = useCallback(async () => {
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/domains?organizationId=${activeOrg}` : "/api/domains"
+    const res = await fetch(url)
     const data = await res.json()
     setDomains(data.filter((d: Domain) => d.status === "VERIFIED"))
-  }
+  }, [isSuperAdmin])
 
-  const fetchLists = async () => {
-    const res = await fetch("/api/contact-lists")
+  const fetchLists = useCallback(async () => {
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/contact-lists?organizationId=${activeOrg}` : "/api/contact-lists"
+    const res = await fetch(url)
     const data = await res.json()
     setLists(data)
-  }
+  }, [isSuperAdmin])
+
+  useEffect(() => {
+    Promise.all([fetchTemplates(), fetchDomains(), fetchLists()]).then(() => setLoading(false))
+  }, [fetchTemplates, fetchDomains, fetchLists])
 
   const handleTemplateChange = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId)
@@ -100,10 +110,12 @@ export default function NewCampaignPage() {
     if (action === "send") setSending(true)
     if (action === "schedule") setScheduling(true)
 
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const payload = {
       ...formData,
       status: action === "schedule" ? "SCHEDULED" : "DRAFT",
       scheduledAt: action === "schedule" && formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
+      ...(activeOrg ? { organizationId: activeOrg } : {}),
     }
 
     const res = await fetch("/api/campaigns", {

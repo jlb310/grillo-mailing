@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { UserRole } from "@prisma/client"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const isAdmin = session.user.role === "ADMIN"
-  const orgId = session.user.organizationId
+  const { searchParams } = new URL(req.url)
+  const requestedOrgId = searchParams.get("organizationId")
+  const effectiveOrgId = getEffectiveOrganizationId(session, requestedOrgId)
 
   const templates = await prisma.template.findMany({
-    where: isAdmin ? {} : { organizationId: orgId! },
+    where: effectiveOrgId ? { organizationId: effectiveOrgId } : {},
     include: { 
       organization: { select: { name: true } },
       createdBy: { select: { name: true, email: true } }
@@ -30,13 +32,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, subject, htmlContent, textContent, organizationId } = body
 
+    if (session.user.role !== UserRole.SUPERADMIN && body.organizationId && body.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })
+    }
+
+    const effectiveOrgId = getEffectiveOrganizationId(session, body.organizationId)
+    if (!effectiveOrgId) {
+      return NextResponse.json({ error: "Falta la organización" }, { status: 400 })
+    }
+
     const template = await prisma.template.create({
       data: {
         name,
         subject,
         htmlContent,
         textContent,
-        organizationId: organizationId || session.user.organizationId!,
+        organizationId: effectiveOrgId,
         createdById: session.user.id,
       }
     })

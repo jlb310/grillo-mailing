@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const isAdmin = session.user.role === "ADMIN"
-  const orgId = session.user.organizationId
+  const { searchParams } = new URL(req.url)
+  const requestedOrgId = searchParams.get("organizationId")
+  const effectiveOrgId = getEffectiveOrganizationId(session, requestedOrgId)
 
-  const where = isAdmin ? {} : { organizationId: orgId! }
+  const campaignWhere = effectiveOrgId ? { organizationId: effectiveOrgId } : {}
+  const eventWhere = effectiveOrgId ? { campaign: { organizationId: effectiveOrgId } } : {}
 
   const [campaigns, events] = await Promise.all([
     prisma.campaign.findMany({
-      where,
+      where: campaignWhere,
       orderBy: { createdAt: "desc" },
       include: {
         _count: { select: { events: true } },
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.emailEvent.groupBy({
       by: ["type"],
-      where: isAdmin ? {} : { campaign: { organizationId: orgId! } },
+      where: eventWhere,
       _count: { type: true },
     }),
   ])
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const dailyEvents = await prisma.emailEvent.findMany({
     where: {
-      ...where,
+      ...eventWhere,
       createdAt: { gte: thirtyDaysAgo },
     },
     select: {

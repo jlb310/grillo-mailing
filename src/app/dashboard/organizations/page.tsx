@@ -11,7 +11,7 @@ import { ResendCredentialsDialog } from "@/components/organizations/resend-crede
 export default async function OrganizationsPage() {
   const session = await getServerSession(authOptions)
   
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || session.user.role !== "SUPERADMIN") {
     redirect("/dashboard")
   }
 

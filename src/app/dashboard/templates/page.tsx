@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Plus, Eye } from "lucide-react"
@@ -17,15 +18,21 @@ interface Template {
 }
 
 export default function TemplatesPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchTemplates()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin])
 
   const fetchTemplates = async () => {
-    const res = await fetch("/api/templates")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/templates?organizationId=${activeOrg}` : "/api/templates"
+    const res = await fetch(url)
     const data = await res.json()
     setTemplates(data)
     setLoading(false)

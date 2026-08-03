@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +39,9 @@ interface ContactList {
 }
 
 export default function ContactsPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [contacts, setContacts] = useState<Contact[]>([])
   const [lists, setLists] = useState<ContactList[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,17 +54,22 @@ export default function ContactsPage() {
   useEffect(() => {
     fetchContacts()
     fetchLists()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin])
 
   const fetchContacts = async () => {
-    const res = await fetch("/api/contacts")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/contacts?organizationId=${activeOrg}` : "/api/contacts"
+    const res = await fetch(url)
     const data = await res.json()
     setContacts(data)
     setLoading(false)
   }
 
   const fetchLists = async () => {
-    const res = await fetch("/api/contact-lists")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/contact-lists?organizationId=${activeOrg}` : "/api/contact-lists"
+    const res = await fetch(url)
     if (res.ok) {
       const data = await res.json()
       setLists(data)
@@ -69,10 +78,12 @@ export default function ContactsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const body = activeOrg ? JSON.stringify({ ...formData, organizationId: activeOrg }) : JSON.stringify(formData)
     const res = await fetch("/api/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body,
     })
     if (res.ok) {
       setOpen(false)
@@ -98,10 +109,15 @@ export default function ContactsPage() {
     if (csvData.length === 0) return
     setImporting(true)
     
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const body = activeOrg
+      ? JSON.stringify({ contacts: csvData, organizationId: activeOrg })
+      : JSON.stringify({ contacts: csvData })
+    
     const res = await fetch("/api/contacts/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contacts: csvData }),
+      body,
     })
     
     if (res.ok) {

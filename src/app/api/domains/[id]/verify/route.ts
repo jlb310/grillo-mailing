@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { authOptions, canAccessOrganization } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { syncDomainWithResend } from "@/lib/domains"
 import { ResendConfigError, getResendClient } from "@/lib/resend"
@@ -25,11 +25,8 @@ export async function POST(
     return NextResponse.json({ error: "Dominio no encontrado" }, { status: 404 })
   }
 
-  if (
-    session.user.role !== "ADMIN" &&
-    domain.organizationId !== session.user.organizationId
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!canAccessOrganization(session, domain.organizationId)) {
+    return NextResponse.json({ error: "No tienes acceso a este dominio" }, { status: 403 })
   }
 
   try {

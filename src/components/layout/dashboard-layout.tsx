@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { GrilloWordmarkBold } from "@/components/brand/wordmark"
 import { ThemeToggle } from "@/components/brand/theme-toggle"
+import { OrganizationSwitcher } from "./organization-switcher"
 import {
   LayoutDashboard,
   Building2,
@@ -33,6 +34,7 @@ interface DashboardLayoutProps {
     name?: string | null
     email?: string | null
     role?: string
+    organizationId?: string | null
   }
 }
 
@@ -40,7 +42,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   const pathname = usePathname()
 
   const filteredNav = navigation.filter(
-    (item) => !item.adminOnly || user.role === "ADMIN"
+    (item) => !item.adminOnly || user.role === "SUPERADMIN"
   )
 
   return (
@@ -48,7 +50,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
       <div className="flex h-screen">
         {/* Sidebar */}
         <aside className="w-72 bg-background-sunken border-r border-border flex flex-col flex-shrink-0 p-6">
-          <div className="px-2 pt-2 mb-8 flex-shrink-0">
+          <div className="px-2 pt-2 mb-6 flex-shrink-0">
             <Link href="/dashboard" className="flex flex-col">
               <GrilloWordmarkBold size={30} color="var(--text)" />
               <span className="text-[10px] font-bold text-primary uppercase tracking-[0.16em] leading-none mt-2 ml-11 opacity-90">
@@ -56,6 +58,13 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
               </span>
             </Link>
           </div>
+
+          {/* Selector de org para SUPERADMIN */}
+          {user.role === "SUPERADMIN" && (
+            <div className="mb-4 -mx-2">
+              <OrganizationSwitcher />
+            </div>
+          )}
 
           <nav className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar min-h-0 -mx-2 px-2">
             {filteredNav.map((item) => {
@@ -107,6 +116,21 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground truncate">{user.name || user.email}</p>
                 <p className="text-[11px] text-foreground-muted truncate">{user.email}</p>
+                {user.role === "SUPERADMIN" && (
+                  <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-bold bg-primary/10 text-primary rounded-md uppercase tracking-wider">
+                    Superadmin
+                  </span>
+                )}
+                {user.role === "ADMIN" && (
+                  <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-bold bg-accent/10 text-accent rounded-md uppercase tracking-wider">
+                    Admin
+                  </span>
+                )}
+                {user.role === "USER" && (
+                  <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-bold bg-background-muted text-foreground-subtle rounded-md uppercase tracking-wider">
+                    Usuario
+                  </span>
+                )}
               </div>
             </div>
 

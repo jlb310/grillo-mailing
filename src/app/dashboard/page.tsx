@@ -1,36 +1,39 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Building2, Globe, Send, Users, TrendingUp, ArrowRight, Plus } from "lucide-react"
 import Link from "next/link"
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams?: { org?: string } }) {
   const session = await getServerSession(authOptions)
   
   if (!session) {
     redirect("/auth/login")
   }
 
-  const isAdmin = session.user.role === "ADMIN"
-  const orgId = session.user.organizationId
+  const effectiveOrgId = getEffectiveOrganizationId(session, searchParams?.org)
+  const isAdmin = session.user.role === "SUPERADMIN"
+  const isGlobalView = isAdmin && !effectiveOrgId
+
+  const orgFilter = effectiveOrgId ? { organizationId: effectiveOrgId } : undefined
 
   const [organizationsCount, domainsCount, campaignsCount, contactsCount] = await Promise.all([
-    isAdmin ? prisma.organization.count() : Promise.resolve(0),
-    isAdmin ? prisma.domain.count() : prisma.domain.count({ where: { organizationId: orgId! } }),
-    isAdmin ? prisma.campaign.count() : prisma.campaign.count({ where: { organizationId: orgId! } }),
-    isAdmin ? prisma.contact.count() : prisma.contact.count({ where: { organizationId: orgId! } }),
+    isGlobalView ? prisma.organization.count() : Promise.resolve(0),
+    orgFilter ? prisma.domain.count({ where: orgFilter }) : prisma.domain.count(),
+    orgFilter ? prisma.campaign.count({ where: orgFilter }) : prisma.campaign.count(),
+    orgFilter ? prisma.contact.count({ where: orgFilter }) : prisma.contact.count(),
   ])
 
   const stats = [
     {
-      name: isAdmin ? "Organizaciones" : "Dominios",
-      value: isAdmin ? organizationsCount : domainsCount,
-      icon: isAdmin ? Building2 : Globe,
-      description: isAdmin ? "Clientes activos" : "Dominios verificados",
-      href: isAdmin ? "/dashboard/organizations" : "/dashboard/domains",
+      name: isGlobalView ? "Organizaciones" : "Dominios",
+      value: isGlobalView ? organizationsCount : domainsCount,
+      icon: isGlobalView ? Building2 : Globe,
+      description: isGlobalView ? "Clientes activos" : "Dominios verificados",
+      href: isGlobalView ? "/dashboard/organizations" : "/dashboard/domains",
     },
     {
       name: "Campañas",
@@ -48,7 +51,7 @@ export default async function DashboardPage() {
     },
   ]
 
-  if (!isAdmin) {
+  if (!isGlobalView) {
     stats.unshift({
       name: "Dominios",
       value: domainsCount,

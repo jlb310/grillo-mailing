@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +54,9 @@ const EMPTY_FORM = {
 }
 
 export default function DomainsPage() {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [domains, setDomains] = useState<Domain[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,11 +76,13 @@ export default function DomainsPage() {
   const [deleting, setDeleting] = useState(false)
 
   const fetchDomains = useCallback(async () => {
-    const res = await fetch("/api/domains")
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const url = activeOrg ? `/api/domains?organizationId=${activeOrg}` : "/api/domains"
+    const res = await fetch(url)
     const data = await res.json()
     setDomains(data)
     setLoading(false)
-  }, [])
+  }, [isSuperAdmin])
 
   const fetchOrganizations = useCallback(async () => {
     const res = await fetch("/api/organizations")
@@ -95,10 +101,14 @@ export default function DomainsPage() {
     e.preventDefault()
     setSaving(true)
     try {
+      const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+      const payload = activeOrg && !formData.organizationId
+        ? { ...formData, organizationId: activeOrg }
+        : formData
       const res = await fetch("/api/domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear el dominio")

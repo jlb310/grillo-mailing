@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Editor } from "@tinymce/tinymce-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +53,9 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
 export default function NewTemplatePage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+
   const [name, setName] = useState("")
   const [subject, setSubject] = useState("")
   const [htmlContent, setHtmlContent] = useState(DEFAULT_HTML)
@@ -65,10 +69,14 @@ export default function NewTemplatePage() {
 
   const handleSave = async () => {
     setSaving(true)
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const body = activeOrg
+      ? JSON.stringify({ name, subject, htmlContent, textContent, organizationId: activeOrg })
+      : JSON.stringify({ name, subject, htmlContent, textContent })
     const res = await fetch("/api/templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, subject, htmlContent, textContent }),
+      body,
     })
     setSaving(false)
     if (res.ok) {
