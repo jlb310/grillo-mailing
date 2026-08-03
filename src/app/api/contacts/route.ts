@@ -14,6 +14,13 @@ export async function GET(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({
     where: effectiveOrgId ? { organizationId: effectiveOrgId } : {},
+    include: {
+      lists: {
+        include: {
+          contactList: true,
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   })
 

@@ -26,8 +26,7 @@ interface Contact {
   phone: string | null
   company: string | null
   unsubscribed: boolean
-  organization: { name: string }
-  lists: { contactList: { name: string } }[]
+  lists?: { contactList: { name: string } }[]
   createdAt: string
 }
 
@@ -316,7 +315,7 @@ export default function ContactsPage() {
                             <Building2 className="w-3 h-3" /> {contact.company}
                           </span>
                         )}
-                        {contact.lists.map((l) => (
+                        {contact.lists?.map((l) => (
                           <Badge key={l.contactList.name} variant="outline" className="text-xs rounded-lg border-border text-foreground-subtle">
                             {l.contactList.name}
                           </Badge>
