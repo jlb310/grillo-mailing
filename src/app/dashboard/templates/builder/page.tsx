@@ -15,10 +15,9 @@ export default function TemplateBuilderPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === "SUPERADMIN"
-  const orgId = isSuperAdmin
-    ? localStorage.getItem("grillo-active-org")
-    : session?.user?.organizationId
-
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(
+    isSuperAdmin ? localStorage.getItem("grillo-active-org") : session?.user?.organizationId || null
+  )
   const [name, setName] = useState("")
   const [subject, setSubject] = useState("")
   const [blocks, setBlocks] = useState<EmailBlock[]>([])
@@ -29,24 +28,48 @@ export default function TemplateBuilderPage() {
   const [showCode, setShowCode] = useState(false)
   const [brandColor, setBrandColor] = useState<string | undefined>(undefined)
   const [orgName, setOrgName] = useState("")
+  const [loadingOrg, setLoadingOrg] = useState(isSuperAdmin && !activeOrgId)
 
-  // Cargar brandColor de la org
+  // Cargar brandColor de la org. Para SUPERADMIN sin org activa,
+  // cargar la primera disponible automáticamente.
   useEffect(() => {
-    if (!orgId) return
-    const endpoint = isSuperAdmin ? "/api/organizations" : "/api/organizations/me"
-    fetch(endpoint)
+    if (!isSuperAdmin) {
+      // ADMIN / USER: usar su org fija
+      if (session?.user?.organizationId) {
+        fetch("/api/organizations/me")
+          .then((r) => r.json())
+          .then((org) => {
+            if (org) {
+              setBrandColor(org.brandColor || "#3fa844")
+              setOrgName(org.name)
+            }
+          })
+          .catch(() => {})
+      }
+      return
+    }
+
+    // SUPERADMIN
+    fetch("/api/organizations")
       .then((r) => r.json())
       .then((data) => {
-        const org = isSuperAdmin
-          ? (Array.isArray(data) ? data.find((o: any) => o.id === orgId) : null)
-          : data
-        if (org) {
-          setBrandColor(org.brandColor || "#3fa844")
-          setOrgName(org.name)
+        if (!Array.isArray(data) || data.length === 0) {
+          setLoadingOrg(false)
+          return
         }
+        const saved = localStorage.getItem("grillo-active-org")
+        const org = saved ? data.find((o: any) => o.id === saved) : null
+        const fallback = org || data[0]
+        if (fallback) {
+          localStorage.setItem("grillo-active-org", fallback.id)
+          setActiveOrgId(fallback.id)
+          setBrandColor(fallback.brandColor || "#3fa844")
+          setOrgName(fallback.name)
+        }
+        setLoadingOrg(false)
       })
-      .catch(() => {})
-  }, [orgId, isSuperAdmin])
+      .catch(() => setLoadingOrg(false))
+  }, [isSuperAdmin, session?.user?.organizationId])
 
   const handleBlocksChange = (newBlocks: EmailBlock[], html: string, text: string) => {
     setBlocks(newBlocks)
@@ -65,13 +88,12 @@ export default function TemplateBuilderPage() {
     }
 
     setSaving(true)
-    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const payload = {
       name,
       subject,
       htmlContent,
       textContent,
-      ...(activeOrg ? { organizationId: activeOrg } : {}),
+      ...(activeOrgId ? { organizationId: activeOrgId } : {}),
     }
 
     const res = await fetch("/api/templates", {
@@ -139,6 +161,15 @@ export default function TemplateBuilderPage() {
           </Button>
         </div>
       </div>
+
+      {loadingOrg && isSuperAdmin && (
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
+          <CardContent className="py-8 text-center">
+            <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-foreground-subtle">Cargando organización...</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1 space-y-4">
