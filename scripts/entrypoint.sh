@@ -29,9 +29,5 @@ npx prisma migrate deploy
 echo "🌱 Verificando seed..."
 node /app/scripts/seed.cjs
 
-# TEMP: crear usuario de prueba para Lenyes (idempotente)
-echo "🧪 Verificando usuario de prueba..."
-node /app/scripts/create-test-user.cjs
-
 echo "🚀 Iniciando servidor..."
 exec node server.js
