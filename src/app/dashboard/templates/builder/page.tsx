@@ -1,20 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { EmailBuilder, type EmailBlock, generateEmailHTML, generateTextVersion } from "@/components/email-builder"
-import { ArrowLeft, Save, Eye, Code } from "lucide-react"
+import { EmailBuilder, type EmailBlock } from "@/components/email-builder"
+import { ArrowLeft, Save, Eye, Code, Palette } from "lucide-react"
 import Link from "next/link"
 
 export default function TemplateBuilderPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === "SUPERADMIN"
+  const orgId = isSuperAdmin
+    ? localStorage.getItem("grillo-active-org")
+    : session?.user?.organizationId
 
   const [name, setName] = useState("")
   const [subject, setSubject] = useState("")
@@ -24,6 +27,26 @@ export default function TemplateBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
   const [showCode, setShowCode] = useState(false)
+  const [brandColor, setBrandColor] = useState<string | undefined>(undefined)
+  const [orgName, setOrgName] = useState("")
+
+  // Cargar brandColor de la org
+  useEffect(() => {
+    if (!orgId) return
+    const endpoint = isSuperAdmin ? "/api/organizations" : "/api/organizations/me"
+    fetch(endpoint)
+      .then((r) => r.json())
+      .then((data) => {
+        const org = isSuperAdmin
+          ? (Array.isArray(data) ? data.find((o: any) => o.id === orgId) : null)
+          : data
+        if (org) {
+          setBrandColor(org.brandColor || "#3fa844")
+          setOrgName(org.name)
+        }
+      })
+      .catch(() => {})
+  }, [orgId, isSuperAdmin])
 
   const handleBlocksChange = (newBlocks: EmailBlock[], html: string, text: string) => {
     setBlocks(newBlocks)
@@ -77,7 +100,20 @@ export default function TemplateBuilderPage() {
           </Link>
           <div>
             <h1 className="text-3xl text-foreground">Email Builder</h1>
-            <p className="text-foreground-subtle mt-1">Arma tu email arrastrando bloques</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-foreground-subtle">Arma tu email con bloques</p>
+              {orgName && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-background-muted text-foreground-subtle border border-border">
+                  {orgName}
+                </span>
+              )}
+              {brandColor && (
+                <div className="flex items-center gap-1">
+                  <Palette className="w-3 h-3 text-foreground-subtle" />
+                  <div className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: brandColor }} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -176,7 +212,7 @@ export default function TemplateBuilderPage() {
               </CardContent>
             </Card>
           ) : (
-            <EmailBuilder onChange={handleBlocksChange} />
+            <EmailBuilder brandColor={brandColor} onChange={handleBlocksChange} />
           )}
         </div>
       </div>
