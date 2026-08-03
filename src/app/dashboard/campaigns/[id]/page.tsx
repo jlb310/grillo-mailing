@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Send, Clock, CheckCircle, XCircle, Loader2, Mail, MousePointer, Eye, TrendingUp } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import Link from "next/link"
 
 interface Campaign {
@@ -31,6 +33,9 @@ export default function CampaignDetailPage() {
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testEmail, setTestEmail] = useState("")
+  const [testResult, setTestResult] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [id, setId] = useState<string>("")
 
   useEffect(() => {
@@ -58,6 +63,39 @@ export default function CampaignDetailPage() {
     setSending(false)
     if (res.ok) {
       fetchCampaign(id)
+    }
+  }
+
+  const handleTestSend = async () => {
+    if (!campaign || !testEmail) return
+
+    setTesting(true)
+    setTestResult(null)
+
+    const payload = {
+      name: campaign.name,
+      subject: campaign.subject,
+      htmlContent: campaign.htmlContent,
+      textContent: "",
+      fromName: campaign.fromName,
+      fromEmail: campaign.fromEmail,
+      replyTo: campaign.replyTo || "",
+      testEmail,
+    }
+
+    const res = await fetch("/api/campaigns/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+    setTesting(false)
+
+    if (res.ok) {
+      setTestResult({ type: "success", message: data.message || `Prueba enviada a ${testEmail}` })
+    } else {
+      setTestResult({ type: "error", message: data.error || "Error al enviar prueba" })
     }
   }
 
@@ -108,17 +146,48 @@ export default function CampaignDetailPage() {
             <p className="text-foreground-subtle mt-1">{campaign.subject}</p>
           </div>
         </div>
-        {campaign.status === "DRAFT" && (
-          <Button 
-            onClick={handleSend} 
-            disabled={sending}
-            className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2"
-          >
-            <Send className="w-4 h-4" />
-            {sending ? "Enviando..." : "Enviar campaña"}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {campaign.status === "DRAFT" && (
+            <>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="Email de prueba"
+                  className="h-10 w-56 rounded-xl border-border text-sm"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleTestSend}
+                  disabled={testing || !testEmail}
+                  className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {testing ? "Enviando..." : "Enviar prueba"}
+                </Button>
+              </div>
+              <Button 
+                onClick={handleSend} 
+                disabled={sending}
+                className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {sending ? "Enviando..." : "Enviar campaña"}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+      {testResult && (
+        <div className={`text-sm px-4 py-2.5 rounded-lg ${
+          testResult.type === "success" 
+            ? "bg-success/10 text-success" 
+            : "bg-danger/10 text-danger"
+        }`}>
+          {testResult.message}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Send, Save, Clock } from "lucide-react"
+import { ArrowLeft, Send, Save, Clock, Mail } from "lucide-react"
 import Link from "next/link"
 
 interface Template {
@@ -49,7 +49,10 @@ export default function NewCampaignPage() {
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [scheduling, setScheduling] = useState(false)
-  
+  const [testing, setTesting] = useState(false)
+  const [testEmail, setTestEmail] = useState("")
+  const [testResult, setTestResult] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
   const [formData, setFormData] = useState({
     name: "",
     subject: "",
@@ -148,6 +151,45 @@ export default function NewCampaignPage() {
     }
   }
 
+  const handleTestSend = async () => {
+    if (!testEmail || !formData.subject || !formData.htmlContent || !formData.fromEmail || !formData.domainId) {
+      setTestResult({ type: "error", message: "Completa asunto, contenido HTML, remitente, dominio y email de prueba" })
+      return
+    }
+
+    setTesting(true)
+    setTestResult(null)
+
+    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
+    const payload = {
+      name: formData.name || "Prueba",
+      subject: formData.subject,
+      htmlContent: formData.htmlContent,
+      textContent: formData.textContent,
+      fromName: formData.fromName,
+      fromEmail: formData.fromEmail,
+      replyTo: formData.replyTo,
+      domainId: formData.domainId,
+      organizationId: activeOrg,
+      testEmail,
+    }
+
+    const res = await fetch("/api/campaigns/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+    setTesting(false)
+
+    if (res.ok) {
+      setTestResult({ type: "success", message: data.message || `Prueba enviada a ${testEmail}` })
+    } else {
+      setTestResult({ type: "error", message: data.error || "Error al enviar prueba" })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -199,6 +241,42 @@ export default function NewCampaignPage() {
           </Button>
         </div>
       </div>
+
+      {/* Test email section */}
+      <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs text-foreground-subtle mb-1.5 block">Email de prueba</Label>
+              <Input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="hola@ejemplo.cl"
+                className="h-10 rounded-xl border-border text-sm"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleTestSend}
+              disabled={testing || !testEmail || !formData.subject || !formData.htmlContent || !formData.domainId}
+              className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted mt-5"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {testing ? "Enviando prueba..." : "Enviar prueba"}
+            </Button>
+          </div>
+          {testResult && (
+            <div className={`mt-3 text-sm px-3 py-2 rounded-lg ${
+              testResult.type === "success" 
+                ? "bg-success/10 text-success" 
+                : "bg-danger/10 text-danger"
+            }`}>
+              {testResult.message}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
         <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
