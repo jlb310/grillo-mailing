@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { EmailBuilder, type EmailBlock } from "@/components/email-builder"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -17,14 +17,6 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, Send, Save, Clock, Mail } from "lucide-react"
 import Link from "next/link"
-
-interface Template {
-  id: string
-  name: string
-  subject: string
-  htmlContent: string
-  textContent: string | null
-}
 
 interface Domain {
   id: string
@@ -42,7 +34,6 @@ export default function NewCampaignPage() {
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === "SUPERADMIN"
 
-  const [templates, setTemplates] = useState<Template[]>([])
   const [domains, setDomains] = useState<Domain[]>([])
   const [lists, setLists] = useState<ContactList[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,14 +58,6 @@ export default function NewCampaignPage() {
     scheduledAt: "",
   })
 
-  const fetchTemplates = useCallback(async () => {
-    const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
-    const url = activeOrg ? `/api/templates?organizationId=${activeOrg}` : "/api/templates"
-    const res = await fetch(url)
-    const data = await res.json()
-    setTemplates(data)
-  }, [isSuperAdmin])
-
   const fetchDomains = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/domains?organizationId=${activeOrg}` : "/api/domains"
@@ -92,20 +75,11 @@ export default function NewCampaignPage() {
   }, [isSuperAdmin])
 
   useEffect(() => {
-    Promise.all([fetchTemplates(), fetchDomains(), fetchLists()]).then(() => setLoading(false))
-  }, [fetchTemplates, fetchDomains, fetchLists])
+    Promise.all([fetchDomains(), fetchLists()]).then(() => setLoading(false))
+  }, [fetchDomains, fetchLists])
 
-  const handleTemplateChange = (templateId: string) => {
-    const template = templates.find((t) => t.id === templateId)
-    if (template) {
-      setFormData({
-        ...formData,
-        templateId,
-        subject: template.subject,
-        htmlContent: template.htmlContent,
-        textContent: template.textContent || "",
-      })
-    }
+  const handleBuilderChange = (_blocks: EmailBlock[], html: string, text: string) => {
+    setFormData((current) => ({ ...current, htmlContent: html, textContent: text }))
   }
 
   const handleSubmit = async (action: "draft" | "send" | "schedule") => {
@@ -295,17 +269,14 @@ export default function NewCampaignPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm text-foreground-muted">Template base</Label>
-              <Select onValueChange={(value) => handleTemplateChange(value as string)}>
-                <SelectTrigger className="h-11 rounded-xl border-border">
-                  <SelectValue placeholder="Selecciona un template (opcional)" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="subject" className="text-sm text-foreground-muted">Asunto del email</Label>
+              <Input
+                id="subject"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                placeholder="Ej: Novedades de este mes"
+                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
+              />
             </div>
           </CardContent>
         </Card>
@@ -402,42 +373,13 @@ export default function NewCampaignPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Contenido</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">Diseña tu mailing</CardTitle>
+            <p className="text-sm text-foreground-subtle">Elige una plantilla o agrega bloques para construir el contenido.</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject" className="text-sm text-foreground-muted">Asunto</Label>
-              <Input
-                id="subject"
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                placeholder="Asunto del email"
-                className="h-11 rounded-xl border-border focus:border-primary focus:ring-primary/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="html" className="text-sm text-foreground-muted">Contenido HTML</Label>
-              <Textarea
-                id="html"
-                value={formData.htmlContent}
-                onChange={(e) => setFormData({ ...formData, htmlContent: e.target.value })}
-                rows={12}
-                className="font-mono text-sm rounded-xl border-border focus:border-primary focus:ring-primary/20 resize-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="text" className="text-sm text-foreground-muted">Contenido texto plano (opcional)</Label>
-              <Textarea
-                id="text"
-                value={formData.textContent}
-                onChange={(e) => setFormData({ ...formData, textContent: e.target.value })}
-                rows={4}
-                className="font-mono text-sm rounded-xl border-border focus:border-primary focus:ring-primary/20 resize-none"
-                placeholder="Versión en texto plano..."
-              />
-            </div>
+          <CardContent className="p-0">
+            <EmailBuilder onChange={handleBuilderChange} />
           </CardContent>
         </Card>
       </div>
