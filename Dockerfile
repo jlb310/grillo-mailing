@@ -45,7 +45,8 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib/email-builder.ts ./lib/email-builder.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
-RUN mkdir -p /app/public/certificates && chown nextjs:nodejs /app/public/certificates
+RUN mkdir -p /app/public/certificates /app/public/logos /app/public/programas /app/public/uploads \
+    && chown -R nextjs:nodejs /app/public/certificates /app/public/logos /app/public/programas /app/public/uploads
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
