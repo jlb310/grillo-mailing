@@ -24,6 +24,11 @@ services:
       - CERTIFICATES_PATH=/app/public/certificates
     volumes:
       - certificates:/app/public/certificates
+      # Uploads locales (logos, programas) viven en /app/public y se sirven
+      # públicamente por la app; los volúmenes evitan que se pierdan al redeploy.
+      - logos:/app/public/logos
+      - programas:/app/public/programas
+      - uploads:/app/public/uploads
     networks:
       - dokploy-network
     restart: unless-stopped
@@ -36,3 +41,6 @@ networks:
 
 volumes:
   certificates:
+  logos:
+  programas:
+  uploads:

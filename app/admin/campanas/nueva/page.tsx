@@ -126,44 +126,60 @@ function EmailBuilderForm() {
 
   async function uploadLogo(file: File) {
     setUploadingLogo(true);
+    setError("");
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "logos");
     const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (data.url) setLogoUrl(data.url);
+    const data = await res.json().catch(() => ({}));
+    if (data.url) {
+      setLogoUrl(data.url);
+    } else {
+      setError(data.error ?? "No se pudo subir el logo. Inténtalo de nuevo.");
+    }
     setUploadingLogo(false);
   }
 
   async function uploadLogoRight(file: File) {
     setUploadingLogoRight(true);
+    setError("");
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "logos");
     const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (data.url) setLogoRightUrl(data.url);
+    const data = await res.json().catch(() => ({}));
+    if (data.url) {
+      setLogoRightUrl(data.url);
+    } else {
+      setError(data.error ?? "No se pudo subir el logo. Inténtalo de nuevo.");
+    }
     setUploadingLogoRight(false);
   }
 
   async function uploadLogoRight2(file: File) {
     setUploadingLogoRight2(true);
+    setError("");
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "logos");
     const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (data.url) setLogoRight2Url(data.url);
+    const data = await res.json().catch(() => ({}));
+    if (data.url) {
+      setLogoRight2Url(data.url);
+    } else {
+      setError(data.error ?? "No se pudo subir el logo. Inténtalo de nuevo.");
+    }
     setUploadingLogoRight2(false);
   }
 
   async function uploadPrograma(file: File) {
     setUploadingPrograma(true);
+    setError("");
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "programas");
     const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (data.url) {
       setProgramaUrl(data.url);
       setCtaButtons((prev) => {
@@ -171,6 +187,8 @@ function EmailBuilderForm() {
         if (alreadyHas) return prev;
         return [...prev, { id: uid(), text: "Ver programa", url: data.url, color: headerColor }];
       });
+    } else {
+      setError(data.error ?? "No se pudo subir el PDF. Inténtalo de nuevo.");
     }
     setUploadingPrograma(false);
   }

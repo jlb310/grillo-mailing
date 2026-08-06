@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { uploadToS3 } from "@/lib/s3";
+import { saveUpload } from "@/lib/storage";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "application/pdf"];
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Archivo demasiado grande (máx 5MB)" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const url = await uploadToS3(buffer, file.name, file.type, folder);
+  const url = await saveUpload(buffer, file.name, file.type, folder);
 
   return NextResponse.json({ url });
 }
