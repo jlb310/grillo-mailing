@@ -83,19 +83,23 @@ export default function CampaignDetailPage() {
       testEmail,
     }
 
-    const res = await fetch("/api/campaigns/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch("/api/campaigns/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
 
-    const data = await res.json()
-    setTesting(false)
-
-    if (res.ok) {
-      setTestResult({ type: "success", message: data.message || `Prueba enviada a ${testEmail}` })
-    } else {
-      setTestResult({ type: "error", message: data.error || "Error al enviar prueba" })
+      if (res.ok) {
+        setTestResult({ type: "success", message: data.message || `Prueba enviada a ${testEmail}` })
+      } else {
+        setTestResult({ type: "error", message: data.error || "Error al enviar prueba" })
+      }
+    } catch {
+      setTestResult({ type: "error", message: "No se pudo conectar con el servidor" })
+    } finally {
+      setTesting(false)
     }
   }
 

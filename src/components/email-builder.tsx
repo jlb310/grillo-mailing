@@ -14,6 +14,7 @@ import {
   Minus,
   Heading,
   Trash2,
+  Copy,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -898,6 +899,22 @@ export function EmailBuilder({
     if (selectedId === id) setSelectedId(null)
   }
 
+  const duplicateBlock = (id: string) => {
+    const index = blocks.findIndex((block) => block.id === id)
+    if (index === -1) return
+
+    const block = blocks[index]
+    const duplicate: EmailBlock = {
+      ...block,
+      id: generateId(),
+      content: JSON.parse(JSON.stringify(block.content)),
+    }
+    const newBlocks = [...blocks]
+    newBlocks.splice(index + 1, 0, duplicate)
+    updateBlocks(newBlocks)
+    setSelectedId(duplicate.id)
+  }
+
   const handleSelectTemplate = (templateBlocks: EmailBlock[]) => {
     // Aplicar brandColor a botones en las plantillas
     const blocksWithBrand = templateBlocks.map((b) => {
@@ -1003,6 +1020,17 @@ export function EmailBuilder({
                   className="w-7 h-7 rounded-lg bg-background-elev border border-border flex items-center justify-center text-foreground-muted hover:text-danger"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    duplicateBlock(block.id)
+                  }}
+                  aria-label="Duplicar bloque"
+                  title="Duplicar bloque"
+                  className="w-7 h-7 rounded-lg bg-background-elev border border-border flex items-center justify-center text-foreground-muted hover:text-primary"
+                >
+                  <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
 

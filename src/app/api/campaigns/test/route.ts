@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      name,
       subject,
       htmlContent,
       textContent,
@@ -23,7 +22,10 @@ export async function POST(req: NextRequest) {
       testEmail,
     } = body
 
-    if (!testEmail || !subject || !htmlContent || !fromEmail) {
+    const recipient = typeof testEmail === "string" ? testEmail.trim() : ""
+    const senderEmail = typeof fromEmail === "string" ? fromEmail.trim().toLowerCase() : ""
+
+    if (!recipient || !subject || !htmlContent || !senderEmail) {
       return NextResponse.json(
         { error: "Faltan datos obligatorios: email de prueba, asunto, contenido HTML o remitente" },
         { status: 400 }
@@ -37,8 +39,8 @@ export async function POST(req: NextRequest) {
     let domain = null
     if (domainId) {
       domain = await prisma.domain.findUnique({ where: { id: domainId } })
-    } else if (fromEmail) {
-      const emailDomain = fromEmail.split("@")[1]
+    } else if (senderEmail) {
+      const emailDomain = senderEmail.split("@")[1]
       if (emailDomain) {
         domain = await prisma.domain.findFirst({
           where: { name: emailDomain },
@@ -58,6 +60,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Falta la organización" }, { status: 400 })
     }
 
+    if (domain.organizationId !== effectiveOrgId) {
+      return NextResponse.json({ error: "El dominio no pertenece a esta organización" }, { status: 403 })
+    }
+
     if (!canAccessOrganization(session, effectiveOrgId)) {
       return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })
     }
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verificar que fromEmail coincide con el dominio
-    if (!fromEmail.endsWith(`@${domain.name}`)) {
+    if (!senderEmail.endsWith(`@${domain.name.toLowerCase()}`)) {
       return NextResponse.json(
         { error: `El remitente debe usar el dominio @${domain.name}` },
         { status: 400 }
@@ -83,17 +89,17 @@ export async function POST(req: NextRequest) {
     const personalizedHtml = htmlContent
       .replace(/\{\{firstName\}\}/g, "[Nombre]")
       .replace(/\{\{lastName\}\}/g, "[Apellido]")
-      .replace(/\{\{email\}\}/g, testEmail)
+      .replace(/\{\{email\}\}/g, recipient)
       .replace(/\{\{subject\}\}/g, subject)
       .replace(/\{\{organizationName\}\}/g, organization?.name || "")
       .replace(
         /\{\{unsubscribeUrl\}\}/g,
-        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/unsubscribe?email=${encodeURIComponent(testEmail)}&org=${effectiveOrgId}`
+        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/unsubscribe?email=${encodeURIComponent(recipient)}&org=${effectiveOrgId}`
       )
 
     const { data, error } = await resend.emails.send({
-      from: `${fromName || organization?.name || "Grillo"} <${fromEmail}>`,
-      to: [testEmail],
+      from: `${fromName || organization?.name || "Grillo"} <${senderEmail}>`,
+      to: [recipient],
       subject: `[PRUEBA] ${subject}`,
       html: personalizedHtml,
       text: textContent || undefined,
@@ -114,12 +120,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       id: data?.id,
-      message: `Email de prueba enviado a ${testEmail}`,
+      message: `Email de prueba enviado a ${recipient}`,
     })
   } catch (error) {
     console.error("Send test email error:", error)
     return NextResponse.json(
-      { error: "Failed to send test email" },
+      { error: error instanceof Error ? error.message : "No se pudo enviar el email de prueba" },
       { status: 500 }
     )
   }

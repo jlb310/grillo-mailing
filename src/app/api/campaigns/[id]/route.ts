@@ -14,7 +14,7 @@ export async function GET(
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
-      domain: { select: { name: true } },
+      domain: { select: { id: true, name: true } },
       contactList: { include: { _count: { select: { members: true } } } },
       template: { select: { name: true } },
       createdBy: { select: { name: true, email: true } },
