@@ -1,17 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Send, Clock, CheckCircle, XCircle, Loader2, Mail, MousePointer, Eye, TrendingUp } from "lucide-react"
+import { ArrowLeft, Send, Clock, CheckCircle, XCircle, Loader2, Mail, MousePointer, Eye, TrendingUp, Pencil, Trash2, Copy, Save, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 
 interface Campaign {
   id: string
+  organizationId: string
   name: string
   subject: string
   status: string
@@ -21,7 +22,7 @@ interface Campaign {
   replyTo: string | null
   sentAt: string | null
   scheduledAt: string | null
-  domain: { name: string }
+  domain: { id: string; name: string }
   contactList: { name: string; _count?: { members: number } } | null
   template: { name: string } | null
   createdBy: { name: string | null; email: string }
@@ -30,6 +31,7 @@ interface Campaign {
 }
 
 export default function CampaignDetailPage() {
+  const router = useRouter()
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -37,6 +39,9 @@ export default function CampaignDetailPage() {
   const [testEmail, setTestEmail] = useState("")
   const [testResult, setTestResult] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [id, setId] = useState<string>("")
+  const [editing, setEditing] = useState(false)
+  const [editData, setEditData] = useState({ name: "", subject: "", fromName: "", fromEmail: "", replyTo: "" })
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     const pathParts = window.location.pathname.split("/")
@@ -53,7 +58,58 @@ export default function CampaignDetailPage() {
     }
     const data = await res.json()
     setCampaign(data)
+    setEditData({
+      name: data.name,
+      subject: data.subject,
+      fromName: data.fromName,
+      fromEmail: data.fromEmail,
+      replyTo: data.replyTo || "",
+    })
     setLoading(false)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!id) return
+    setActionLoading(true)
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editData),
+    })
+    const data = await res.json()
+    setActionLoading(false)
+    if (res.ok) {
+      setEditing(false)
+      fetchCampaign(id)
+    } else {
+      alert(data.error || "No se pudo actualizar la campaña")
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (!id) return
+    setActionLoading(true)
+    const res = await fetch(`/api/campaigns/${id}`, { method: "POST" })
+    const data = await res.json()
+    setActionLoading(false)
+    if (res.ok) {
+      router.push(`/dashboard/campaigns/${data.id}`)
+    } else {
+      alert(data.error || "No se pudo duplicar la campaña")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!id || !window.confirm(`¿Eliminar la campaña "${campaign?.name}"? Esta acción no se puede deshacer.`)) return
+    setActionLoading(true)
+    const res = await fetch(`/api/campaigns/${id}`, { method: "DELETE" })
+    const data = await res.json()
+    setActionLoading(false)
+    if (res.ok) {
+      router.push("/dashboard/campaigns")
+    } else {
+      alert(data.error || "No se pudo eliminar la campaña")
+    }
   }
 
   const handleSend = async () => {
@@ -80,6 +136,8 @@ export default function CampaignDetailPage() {
       fromName: campaign.fromName,
       fromEmail: campaign.fromEmail,
       replyTo: campaign.replyTo || "",
+      domainId: campaign.domain.id,
+      organizationId: campaign.organizationId,
       testEmail,
     }
 
@@ -151,6 +209,16 @@ export default function CampaignDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setEditing(!editing)} disabled={actionLoading || campaign.status === "SENT" || campaign.status === "SENDING"} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
+            {editing ? <X className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
+            {editing ? "Cancelar" : "Editar"}
+          </Button>
+          <Button variant="outline" onClick={handleDuplicate} disabled={actionLoading} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
+            <Copy className="w-4 h-4 mr-2" /> Duplicar
+          </Button>
+          <Button variant="outline" onClick={handleDelete} disabled={actionLoading || campaign.status === "SENDING"} className="h-10 rounded-xl border-danger/30 text-danger hover:bg-danger/10">
+            <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+          </Button>
           {campaign.status === "DRAFT" && (
             <>
               <div className="flex items-center gap-2">
@@ -191,6 +259,39 @@ export default function CampaignDetailPage() {
         }`}>
           {testResult.message}
         </div>
+      )}
+
+      {editing && (
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold tracking-tight text-foreground">Editar campaña</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              ["name", "Nombre de la campaña"],
+              ["subject", "Asunto"],
+              ["fromName", "Nombre del remitente"],
+              ["fromEmail", "Email del remitente"],
+              ["replyTo", "Reply-to"],
+            ].map(([key, label]) => (
+              <div key={key} className="space-y-1.5">
+                <Label className="text-sm text-foreground-muted">{label}</Label>
+                <Input
+                  type={key === "fromEmail" || key === "replyTo" ? "email" : "text"}
+                  value={editData[key as keyof typeof editData]}
+                  onChange={(e) => setEditData({ ...editData, [key]: e.target.value })}
+                  className="h-10 rounded-xl border-border"
+                />
+              </div>
+            ))}
+            <div className="md:col-span-2 flex justify-end">
+              <Button onClick={handleSaveEdit} disabled={actionLoading} className="h-10 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl gap-2">
+                <Save className="w-4 h-4" />
+                {actionLoading ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Stats */}
