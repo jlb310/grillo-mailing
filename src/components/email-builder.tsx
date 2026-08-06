@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -1016,6 +1016,14 @@ export function EmailBuilder({
     setShowSelector(false)
     updateBlocks(blocksWithBrand)
   }
+
+  // Emitir HTML inicial al montar para que el padre siempre tenga contenido
+  useEffect(() => {
+    const html = generateEmailHTML(blocks)
+    const text = generateTextVersion(blocks)
+    onChange?.(blocks, html, text)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // solo al montar
 
   const selectedBlock = blocks.find((b) => b.id === selectedId)
 

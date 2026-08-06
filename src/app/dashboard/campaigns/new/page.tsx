@@ -102,6 +102,13 @@ export default function NewCampaignPage() {
     })
 
     if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      const message = errorData.error || errorData.message || `Error ${res.status}: ${res.statusText}`
+      toast({
+        title: "Error al guardar",
+        description: message,
+        variant: "destructive",
+      })
       setSaving(false)
       setSending(false)
       setScheduling(false)
@@ -389,7 +396,7 @@ export default function NewCampaignPage() {
             <CardTitle className="text-base font-semibold tracking-tight text-foreground">Diseña tu mailing</CardTitle>
             <p className="text-sm text-foreground-subtle">Elige una plantilla o agrega bloques para construir el contenido.</p>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 min-h-[400px]">
             <EmailBuilder onChange={handleBuilderChange} />
           </CardContent>
         </Card>
