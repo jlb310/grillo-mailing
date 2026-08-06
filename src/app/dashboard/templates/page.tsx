@@ -46,16 +46,10 @@ export default function TemplatesPage() {
           <p className="text-foreground-muted mt-2 text-lg">Diseña y guarda templates reutilizables para tus campañas</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/templates/new">
-            <Button variant="outline" className="h-11 rounded-xl border-border text-foreground hover:bg-background-muted gap-2">
-              <Plus className="w-4 h-4" />
-              Editor HTML
-            </Button>
-          </Link>
           <Link href="/dashboard/templates/builder">
             <Button className="h-11 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm font-medium gap-2">
               <Plus className="w-4 h-4" />
-              Email Builder
+              Nuevo template
             </Button>
           </Link>
         </div>
@@ -92,7 +86,7 @@ export default function TemplatesPage() {
               </div>
               <p className="text-foreground-subtle font-medium">No hay templates creados</p>
               <p className="text-sm text-foreground-subtle/60 mt-1">Crea tu primer template para empezar</p>
-              <Link href="/dashboard/templates/new">
+              <Link href="/dashboard/templates/builder">
                 <Button className="mt-4 h-10 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl text-sm">
                   <Plus className="w-4 h-4 mr-2" />
                   Nuevo template

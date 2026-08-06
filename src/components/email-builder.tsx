@@ -15,6 +15,7 @@ import {
   Heading,
   Trash2,
   Copy,
+  Plus,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -83,6 +84,7 @@ const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
     bgColor: "#f5f5f5",
     showUnsubscribe: true,
     unsubscribeText: "Darse de baja",
+    socialLinks: [],
   },
   "column-2": {
     left: [
@@ -117,6 +119,18 @@ const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9)
+}
+
+function socialLabel(platform: string) {
+  const labels: Record<string, string> = {
+    facebook: "f",
+    instagram: "ig",
+    linkedin: "in",
+    x: "X",
+    youtube: "yt",
+    whatsapp: "wa",
+  }
+  return labels[platform] || "•"
 }
 
 function renderBlockToHTML(block: EmailBlock): string {
@@ -173,8 +187,19 @@ function renderBlockToHTML(block: EmailBlock): string {
       const unsub = c.showUnsubscribe
         ? ` | <a href="{{unsubscribeUrl}}" style="color:${c.color};text-decoration:underline;">${c.unsubscribeText}</a>`
         : ""
+      const socialLinks = Array.isArray(c.socialLinks) ? c.socialLinks : []
+      const socials = socialLinks.length
+        ? `<div style="text-align:center;margin:0 0 14px;">${socialLinks
+            .filter((link: any) => link?.url)
+            .map(
+              (link: any) =>
+                `<a href="${link.url}" target="_blank" style="display:inline-block;width:30px;height:30px;line-height:30px;margin:0 4px;border-radius:50%;background-color:${link.color || "#1a1a1a"};color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:11px;font-weight:700;text-align:center;">${socialLabel(link.platform)}</a>`
+            )
+            .join("")}</div>`
+        : ""
       return `<tr>
         <td style="padding:${c.padding}px;background-color:${c.bgColor};text-align:${c.align};">
+          ${socials}
           <p style="margin:0;font-size:${c.fontSize}px;color:${c.color};font-family:system-ui,sans-serif;">
             ${c.text}${unsub}
           </p>
@@ -665,6 +690,57 @@ function BlockProperties({
           {field("Color de fondo", "bgColor", "color")}
           {field("Padding", "padding", "number")}
           {field("Texto de baja", "unsubscribeText")}
+          <div className="space-y-2 border-t border-border pt-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-foreground-subtle">Redes sociales</Label>
+              <button
+                onClick={() => onChange({ ...c, socialLinks: [...(Array.isArray(c.socialLinks) ? c.socialLinks : []), { platform: "instagram", url: "https://", color: "#e1306c" }] })}
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <Plus className="w-3 h-3" /> Agregar
+              </button>
+            </div>
+            {(Array.isArray(c.socialLinks) ? c.socialLinks : []).map((link: any, index: number) => {
+              const links = c.socialLinks as any[]
+              const updateSocial = (changes: Record<string, string>) => {
+                const next = [...links]
+                next[index] = { ...next[index], ...changes }
+                onChange({ ...c, socialLinks: next })
+              }
+              return (
+                <div key={index} className="grid grid-cols-[90px_1fr_28px] gap-1.5 items-center">
+                  <select
+                    value={link.platform || "instagram"}
+                    onChange={(e) => updateSocial({ platform: e.target.value })}
+                    className="h-8 rounded-lg border border-border bg-background text-xs px-1"
+                  >
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="x">X</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="whatsapp">WhatsApp</option>
+                  </select>
+                  <Input
+                    value={link.url || ""}
+                    onChange={(e) => updateSocial({ url: e.target.value })}
+                    placeholder="https://..."
+                    className="h-8 rounded-lg border-border text-xs"
+                  />
+                  <button
+                    onClick={() => onChange({ ...c, socialLinks: links.filter((_, socialIndex) => socialIndex !== index) })}
+                    className="h-8 rounded-lg text-foreground-muted hover:text-danger"
+                    aria-label="Eliminar red social"
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
+            {(!Array.isArray(c.socialLinks) || c.socialLinks.length === 0) && (
+              <p className="text-xs text-foreground-subtle">Agrega enlaces para mostrarlos en una línea centrada.</p>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm text-foreground-muted cursor-pointer">
             <input
               type="checkbox"
@@ -788,8 +864,22 @@ function BlockPreview({ block }: { block: EmailBlock }) {
 
     case "footer": {
       const unsub = c.showUnsubscribe ? ` | ${c.unsubscribeText}` : ""
+      const socialLinks = Array.isArray(c.socialLinks) ? c.socialLinks : []
       return (
         <div style={{ padding: c.padding, backgroundColor: c.bgColor, textAlign: c.align }}>
+          {socialLinks.length > 0 && (
+            <div className="flex justify-center gap-2 mb-3">
+              {socialLinks.map((link: any, index: number) => (
+                <span
+                  key={`${link.platform}-${index}`}
+                  className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[10px] font-bold text-white"
+                  style={{ backgroundColor: link.color || "#1a1a1a" }}
+                >
+                  {socialLabel(link.platform)}
+                </span>
+              ))}
+            </div>
+          )}
           <p style={{ margin: 0, fontSize: c.fontSize, color: c.color }}>
             {c.text}{unsub}
           </p>

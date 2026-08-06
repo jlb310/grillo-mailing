@@ -4,6 +4,27 @@ import { authOptions, getEffectiveOrganizationId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { UserRole } from "@prisma/client"
 
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const requestedOrgId = searchParams.get("organizationId")
+  const effectiveOrgId = getEffectiveOrganizationId(session, requestedOrgId)
+
+  const campaigns = await prisma.campaign.findMany({
+    where: effectiveOrgId ? { organizationId: effectiveOrgId } : {},
+    include: {
+      domain: { select: { name: true } },
+      contactList: { select: { name: true } },
+      template: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  })
+
+  return NextResponse.json(campaigns)
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
