@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: "Has sido dado de baja exitosamente" })
   } catch (error) {
+    console.error("Unsubscribe error:", error)
     return NextResponse.json({ error: "Failed to unsubscribe" }, { status: 500 })
   }
 }

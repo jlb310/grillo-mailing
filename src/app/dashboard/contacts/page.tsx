@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,9 @@ interface ContactList {
   _count?: { members: number }
 }
 
+/** Fila cruda de un CSV importado: las cabeceras las pone el usuario. */
+type CsvRow = Record<string, string | undefined>
+
 export default function ContactsPage() {
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === "SUPERADMIN"
@@ -46,26 +49,20 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [csvData, setCsvData] = useState<any[]>([])
+  const [csvData, setCsvData] = useState<CsvRow[]>([])
   const [importing, setImporting] = useState(false)
   const [formData, setFormData] = useState({ email: "", firstName: "", lastName: "", phone: "", company: "" })
 
-  useEffect(() => {
-    fetchContacts()
-    fetchLists()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin])
-
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/contacts?organizationId=${activeOrg}` : "/api/contacts"
     const res = await fetch(url)
     const data = await res.json()
     setContacts(data)
     setLoading(false)
-  }
+  }, [isSuperAdmin])
 
-  const fetchLists = async () => {
+  const fetchLists = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/contact-lists?organizationId=${activeOrg}` : "/api/contact-lists"
     const res = await fetch(url)
@@ -73,7 +70,12 @@ export default function ContactsPage() {
       const data = await res.json()
       setLists(data)
     }
-  }
+  }, [isSuperAdmin])
+
+  useEffect(() => {
+    fetchContacts()
+    fetchLists()
+  }, [fetchContacts, fetchLists])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +97,7 @@ export default function ContactsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     
-    Papa.parse(file, {
+    Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {

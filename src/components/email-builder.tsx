@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useCallback, useRef, useEffect, type CSSProperties } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Type,
-  Image,
+  // Alias: `Image` a secas se confunde con next/image y con <img> en el linter.
+  Image as ImageIcon,
   Square,
   MousePointerClick,
   Minus,
@@ -24,17 +24,60 @@ import {
   Palette,
   FileImage,
 } from "lucide-react"
-import { TEMPLATE_PRESETS, type TemplatePreset } from "@/lib/email-templates"
+import { TEMPLATE_PRESETS } from "@/lib/email-templates"
 
 export type BlockType = "header" | "text" | "image" | "button" | "divider" | "footer" | "column-2"
+
+/** Tipos de bloque que pueden ir dentro de una columna. */
+export type SubBlockType = "text" | "image" | "button"
+
+export interface SubBlock {
+  type: SubBlockType
+  content: BlockContent
+}
+
+export interface SocialLink {
+  platform: string
+  url: string
+  color?: string
+}
+
+/**
+ * El contenido de un bloque es un bag de propiedades que varía por tipo y se
+ * persiste como JSON en `Campaign.blocks`. Al volver de la base es data sin
+ * validar, así que se lee siempre con los accessors `str`/`num`/`subs`/`socials`
+ * de abajo en vez de confiar en la forma.
+ */
+export type BlockContentValue = string | number | boolean | SubBlock[] | SocialLink[] | null | undefined
+
+export type BlockContent = Record<string, BlockContentValue>
 
 export interface EmailBlock {
   id: string
   type: BlockType
-  content: Record<string, any>
+  content: BlockContent
 }
 
-const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
+const str = (value: BlockContentValue, fallback = ""): string =>
+  typeof value === "string" ? value : fallback
+
+const num = (value: BlockContentValue, fallback = 0): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : fallback
+
+const bool = (value: BlockContentValue): boolean => value === true
+
+const subs = (value: BlockContentValue): SubBlock[] =>
+  Array.isArray(value) ? (value as SubBlock[]).filter((s) => s && typeof s === "object" && "type" in s) : []
+
+const align = (value: BlockContentValue): CSSProperties["textAlign"] => {
+  const v = str(value, "left")
+  return v === "center" || v === "right" || v === "justify" ? v : "left"
+}
+
+const socials = (value: BlockContentValue): SocialLink[] =>
+  Array.isArray(value) ? (value as SocialLink[]).filter((s) => s && typeof s === "object" && "platform" in s) : []
+
+const DEFAULT_BLOCK_CONTENT: Record<BlockType, BlockContent> = {
   header: {
     logoUrl: "",
     logoText: "Tu Logo",
@@ -102,19 +145,6 @@ const DEFAULT_BLOCK_CONTENT: Record<string, Record<string, any>> = {
     bgColor: "#ffffff",
     padding: 20,
   },
-  product: {
-    imageSrc: "",
-    imageAlt: "Producto",
-    name: "Nombre del producto",
-    description: "$0.00",
-    buttonText: "Comprar",
-    buttonUrl: "https://",
-    buttonBgColor: "#3fa844",
-    buttonTextColor: "#ffffff",
-    align: "center",
-    padding: 20,
-    borderRadius: 8,
-  },
 }
 
 function generateId() {
@@ -138,35 +168,35 @@ function renderBlockToHTML(block: EmailBlock): string {
   switch (block.type) {
     case "header":
       return `<tr>
-        <td style="padding:${c.padding}px;background-color:${c.bgColor};text-align:${c.logoAlign};">
-          ${c.logoUrl ? `<img src="${c.logoUrl}" alt="${c.logoText}" style="max-width:180px;height:auto;display:inline-block;" />` : `<span style="font-size:24px;font-weight:700;color:#1a1a1a;font-family:system-ui,sans-serif;">${c.logoText}</span>`}
+        <td style="padding:${num(c.padding, 20)}px;background-color:${str(c.bgColor, "#ffffff")};text-align:${str(c.logoAlign, "center")};">
+          ${c.logoUrl ? `<img src="${str(c.logoUrl)}" alt="${str(c.logoText)}" style="max-width:180px;height:auto;display:inline-block;" />` : `<span style="font-size:24px;font-weight:700;color:#1a1a1a;font-family:system-ui,sans-serif;">${str(c.logoText)}</span>`}
         </td>
       </tr>`
 
     case "text":
       return `<tr>
-        <td style="padding:${c.padding}px;text-align:${c.align};">
-          <p style="margin:0;font-size:${c.fontSize}px;line-height:${c.lineHeight};color:${c.color};font-family:system-ui,sans-serif;">
-            ${c.text.replace(/\n/g, "<br>")}
+        <td style="padding:${num(c.padding, 20)}px;text-align:${str(c.align, "left")};">
+          <p style="margin:0;font-size:${num(c.fontSize, 16)}px;line-height:${num(c.lineHeight, 1.6)};color:${str(c.color, "#1a1a1a")};font-family:system-ui,sans-serif;">
+            ${str(c.text).replace(/\n/g, "<br>")}
           </p>
         </td>
       </tr>`
 
     case "image":
       return `<tr>
-        <td style="padding:${c.padding}px;text-align:${c.align};">
-          <img src="${c.src || "https://via.placeholder.com/600x300/f5f5f5/a3a3a3?text=Tu+Imagen"}" alt="${c.alt}" style="width:${c.width};max-width:100%;height:auto;border-radius:${c.borderRadius}px;display:inline-block;" />
+        <td style="padding:${num(c.padding, 20)}px;text-align:${str(c.align, "center")};">
+          <img src="${str(c.src) || "https://via.placeholder.com/600x300/f5f5f5/a3a3a3?text=Tu+Imagen"}" alt="${str(c.alt)}" style="width:${str(c.width, "100%")};max-width:100%;height:auto;border-radius:${num(c.borderRadius, 8)}px;display:inline-block;" />
         </td>
       </tr>`
 
     case "button": {
-      const btnWidth = c.fullWidth ? "width:100%;" : ""
+      const btnWidth = bool(c.fullWidth) ? "width:100%;" : ""
       return `<tr>
-        <td style="padding:${c.padding}px;text-align:${c.align};">
+        <td style="padding:${num(c.padding, 12)}px;text-align:${str(c.align, "center")};">
           <table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;${btnWidth}">
             <tr>
-              <td align="center" style="background-color:${c.bgColor};border-radius:${c.borderRadius}px;padding:${c.padding}px 24px;">
-                <a href="${c.url}" target="_blank" style="display:inline-block;text-decoration:none;color:${c.textColor};font-size:${c.fontSize}px;font-weight:600;font-family:system-ui,sans-serif;">${c.text}</a>
+              <td align="center" style="background-color:${str(c.bgColor, "#3fa844")};border-radius:${num(c.borderRadius, 8)}px;padding:${num(c.padding, 12)}px 24px;">
+                <a href="${str(c.url, "#")}" target="_blank" style="display:inline-block;text-decoration:none;color:${str(c.textColor, "#ffffff")};font-size:${num(c.fontSize, 16)}px;font-weight:600;font-family:system-ui,sans-serif;">${str(c.text)}</a>
               </td>
             </tr>
           </table>
@@ -176,32 +206,32 @@ function renderBlockToHTML(block: EmailBlock): string {
 
     case "divider":
       return `<tr>
-        <td style="padding:${c.padding}px 0;">
-          <table width="${c.width}" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-            <tr><td style="border-top:${c.height}px solid ${c.color};font-size:0;line-height:0;">&nbsp;</td></tr>
+        <td style="padding:${num(c.padding, 20)}px 0;">
+          <table width="${str(c.width, "100%")}" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+            <tr><td style="border-top:${num(c.height, 1)}px solid ${str(c.color, "#e5e5e5")};font-size:0;line-height:0;">&nbsp;</td></tr>
           </table>
         </td>
       </tr>`
 
     case "footer": {
-      const unsub = c.showUnsubscribe
-        ? ` | <a href="{{unsubscribeUrl}}" style="color:${c.color};text-decoration:underline;">${c.unsubscribeText}</a>`
+      const unsub = bool(c.showUnsubscribe)
+        ? ` | <a href="{{unsubscribeUrl}}" style="color:${str(c.color, "#a3a3a3")};text-decoration:underline;">${str(c.unsubscribeText)}</a>`
         : ""
-      const socialLinks = Array.isArray(c.socialLinks) ? c.socialLinks : []
-      const socials = socialLinks.length
+      const socialLinks = socials(c.socialLinks)
+      const socialRow = socialLinks.length
         ? `<div style="text-align:center;margin:0 0 14px;">${socialLinks
-            .filter((link: any) => link?.url)
+            .filter((link) => link.url)
             .map(
-              (link: any) =>
+              (link) =>
                 `<a href="${link.url}" target="_blank" style="display:inline-block;width:30px;height:30px;line-height:30px;margin:0 4px;border-radius:50%;background-color:${link.color || "#1a1a1a"};color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:11px;font-weight:700;text-align:center;">${socialLabel(link.platform)}</a>`
             )
             .join("")}</div>`
         : ""
       return `<tr>
-        <td style="padding:${c.padding}px;background-color:${c.bgColor};text-align:${c.align};">
-          ${socials}
-          <p style="margin:0;font-size:${c.fontSize}px;color:${c.color};font-family:system-ui,sans-serif;">
-            ${c.text}${unsub}
+        <td style="padding:${num(c.padding, 20)}px;background-color:${str(c.bgColor, "#f5f5f5")};text-align:${str(c.align, "center")};">
+          ${socialRow}
+          <p style="margin:0;font-size:${num(c.fontSize, 12)}px;color:${str(c.color, "#a3a3a3")};font-family:system-ui,sans-serif;">
+            ${str(c.text)}${unsub}
           </p>
         </td>
       </tr>`
@@ -209,35 +239,33 @@ function renderBlockToHTML(block: EmailBlock): string {
 
     case "column-2": {
       const ratios = c.ratio === "33/66" ? ["33%", "67%"] : c.ratio === "66/33" ? ["67%", "33%"] : ["50%", "50%"]
-      const left = Array.isArray(c.left) ? c.left : []
-      const right = Array.isArray(c.right) ? c.right : []
-      
-      const renderSub = (sub: any) => {
-        if (!sub) return ""
+      const gap = num(c.gap, 20)
+
+      const renderSub = (sub: SubBlock) => {
         const sc = sub.content || {}
         if (sub.type === "text") {
-          return `<p style="margin:0 0 12px;font-size:${sc.fontSize || 16}px;line-height:${sc.lineHeight || 1.6};color:${sc.color || "#1a1a1a"};font-family:system-ui,sans-serif;">${(sc.text || "").replace(/\n/g, "<br>")}</p>`
+          return `<p style="margin:0 0 12px;font-size:${num(sc.fontSize, 16)}px;line-height:${num(sc.lineHeight, 1.6)};color:${str(sc.color, "#1a1a1a")};font-family:system-ui,sans-serif;">${str(sc.text).replace(/\n/g, "<br>")}</p>`
         }
         if (sub.type === "image") {
-          return `<img src="${sc.src || ""}" alt="${sc.alt || ""}" style="width:100%;max-width:100%;height:auto;border-radius:${sc.borderRadius || 0}px;display:block;margin-bottom:12px;" />`
+          return `<img src="${str(sc.src)}" alt="${str(sc.alt)}" style="width:100%;max-width:100%;height:auto;border-radius:${num(sc.borderRadius)}px;display:block;margin-bottom:12px;" />`
         }
         if (sub.type === "button") {
-          return `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;margin-bottom:12px;"><tr><td align="center" style="background-color:${sc.bgColor || "#3fa844"};border-radius:${sc.borderRadius || 8}px;padding:${sc.padding || 12}px 24px;"><a href="${sc.url || "#"}" target="_blank" style="display:inline-block;text-decoration:none;color:${sc.textColor || "#fff"};font-size:${sc.fontSize || 16}px;font-weight:600;font-family:system-ui,sans-serif;">${sc.text || "Botón"}</a></td></tr></table>`
+          return `<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;margin-bottom:12px;"><tr><td align="center" style="background-color:${str(sc.bgColor, "#3fa844")};border-radius:${num(sc.borderRadius, 8)}px;padding:${num(sc.padding, 12)}px 24px;"><a href="${str(sc.url, "#")}" target="_blank" style="display:inline-block;text-decoration:none;color:${str(sc.textColor, "#fff")};font-size:${num(sc.fontSize, 16)}px;font-weight:600;font-family:system-ui,sans-serif;">${str(sc.text, "Botón")}</a></td></tr></table>`
         }
         return ""
       }
 
-      const renderColumn = (subs: any[]) => subs.map(renderSub).join("")
+      const renderColumn = (column: SubBlock[]) => column.map(renderSub).join("")
 
       return `<tr>
-        <td style="padding:${c.padding}px;background-color:${c.bgColor};">
+        <td style="padding:${num(c.padding, 20)}px;background-color:${str(c.bgColor, "#ffffff")};">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td width="${ratios[0]}" valign="top" style="padding-right:${c.gap / 2}px;">
-                ${renderColumn(left)}
+              <td width="${ratios[0]}" valign="top" style="padding-right:${gap / 2}px;">
+                ${renderColumn(subs(c.left))}
               </td>
-              <td width="${ratios[1]}" valign="top" style="padding-left:${c.gap / 2}px;">
-                ${renderColumn(right)}
+              <td width="${ratios[1]}" valign="top" style="padding-left:${gap / 2}px;">
+                ${renderColumn(subs(c.right))}
               </td>
             </tr>
           </table>
@@ -276,19 +304,17 @@ export function generateEmailHTML(blocks: EmailBlock[]): string {
 export function generateTextVersion(blocks: EmailBlock[]): string {
   return blocks
     .map((b) => {
-      if (b.type === "text") return b.content.text
-      if (b.type === "button") return `${b.content.text}: ${b.content.url}`
-      if (b.type === "footer") return b.content.text
-      if (b.type === "header") return b.content.logoText
+      if (b.type === "text") return str(b.content.text)
+      if (b.type === "button") return `${str(b.content.text)}: ${str(b.content.url)}`
+      if (b.type === "footer") return str(b.content.text)
+      if (b.type === "header") return str(b.content.logoText)
       if (b.type === "column-2") {
-        const extractText = (subs: any[]) =>
-          subs
-            .filter((s: any) => s?.type === "text" || s?.type === "button")
-            .map((s: any) => (s.type === "button" ? `${s.content?.text || ""}: ${s.content?.url || ""}` : s.content?.text || ""))
+        const extractText = (column: SubBlock[]) =>
+          column
+            .filter((s) => s.type === "text" || s.type === "button")
+            .map((s) => (s.type === "button" ? `${str(s.content?.text)}: ${str(s.content?.url)}` : str(s.content?.text)))
             .join("\n")
-        const left = Array.isArray(b.content.left) ? extractText(b.content.left) : ""
-        const right = Array.isArray(b.content.right) ? extractText(b.content.right) : ""
-        return `${left}\n${right}`
+        return `${extractText(subs(b.content.left))}\n${extractText(subs(b.content.right))}`
       }
       return ""
     })
@@ -301,7 +327,7 @@ function BlockPalette({ onAdd, brandColor }: { onAdd: (type: BlockType) => void;
   const items: { type: BlockType; label: string; icon: React.ReactNode }[] = [
     { type: "header", label: "Logo / Header", icon: <Heading className="w-4 h-4" /> },
     { type: "text", label: "Texto", icon: <Type className="w-4 h-4" /> },
-    { type: "image", label: "Imagen", icon: <Image className="w-4 h-4" /> },
+    { type: "image", label: "Imagen", icon: <ImageIcon className="w-4 h-4" /> },
     { type: "button", label: "Botón", icon: <MousePointerClick className="w-4 h-4" /> },
     { type: "column-2", label: "2 Columnas", icon: <Columns className="w-4 h-4" /> },
     { type: "divider", label: "Separador", icon: <Minus className="w-4 h-4" /> },
@@ -426,6 +452,7 @@ function ImageUploadField({
     <div className="space-y-2">
       <Label className="text-xs text-foreground-subtle">Imagen</Label>
       {value && (
+        // eslint-disable-next-line @next/next/no-img-element -- preview de una URL externa o data: URI; next/image no optimiza ninguna de las dos
         <img src={value} alt="Preview" className="w-full max-h-32 object-contain rounded-lg border border-border" />
       )}
       <div className="flex gap-2">
@@ -456,7 +483,7 @@ function BlockProperties({
   onChange,
 }: {
   block: EmailBlock
-  onChange: (content: Record<string, any>) => void
+  onChange: (content: BlockContent) => void
 }) {
   const c = block.content
 
@@ -465,7 +492,7 @@ function BlockProperties({
       <Label className="text-xs text-foreground-subtle">{label}</Label>
       <Input
         type={type}
-        value={c[key] ?? ""}
+        value={type === "number" ? num(c[key]) : str(c[key])}
         placeholder={placeholder}
         onChange={(e) => onChange({ ...c, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
         className="h-8 rounded-lg border-border text-sm"
@@ -477,7 +504,7 @@ function BlockProperties({
     <div className="space-y-1.5">
       <Label className="text-xs text-foreground-subtle">{label}</Label>
       <Textarea
-        value={c[key] ?? ""}
+        value={str(c[key])}
         onChange={(e) => onChange({ ...c, [key]: e.target.value })}
         rows={rows}
         className="rounded-lg border-border text-sm resize-none"
@@ -507,40 +534,40 @@ function BlockProperties({
   )
 
   const columnTypeField = (side: "left" | "right") => {
-    const subs: any[] = Array.isArray(c[side]) ? c[side] : []
-    const setSubs = (newSubs: any[]) => onChange({ ...c, [side]: newSubs })
+    const column = subs(c[side])
+    const setSubs = (newSubs: SubBlock[]) => onChange({ ...c, [side]: newSubs })
 
-    const addSub = (type: "text" | "image" | "button") => {
-      const defaults: Record<string, any> =
+    const addSub = (type: SubBlockType) => {
+      const defaults: BlockContent =
         type === "text"
           ? { text: "Texto...", align: "center", fontSize: 16, color: "#1a1a1a", lineHeight: 1.6 }
           : type === "image"
           ? { src: "", alt: "", align: "center", width: "100%", borderRadius: 8 }
           : { text: "Comprar", url: "https://", align: "center", bgColor: "#3fa844", textColor: "#fff", fontSize: 16, padding: 12, borderRadius: 8, fullWidth: false }
-      setSubs([...subs, { type, content: defaults }])
+      setSubs([...column, { type, content: defaults }])
     }
 
     const removeSub = (index: number) => {
-      const next = [...subs]
+      const next = [...column]
       next.splice(index, 1)
       setSubs(next)
     }
 
     const moveSub = (index: number, dir: -1 | 1) => {
-      const next = [...subs]
+      const next = [...column]
       const target = index + dir
       if (target < 0 || target >= next.length) return
       ;[next[index], next[target]] = [next[target], next[index]]
       setSubs(next)
     }
 
-    const updateSub = (index: number, content: Record<string, any>) => {
-      const next = [...subs]
+    const updateSub = (index: number, content: BlockContent) => {
+      const next = [...column]
       next[index] = { ...next[index], content: { ...next[index].content, ...content } }
       setSubs(next)
     }
 
-    const renderSubEditor = (sub: any, index: number) => {
+    const renderSubEditor = (sub: SubBlock, index: number) => {
       const sc = sub.content || {}
       return (
         <div key={index} className="border border-border rounded-lg p-2 space-y-2">
@@ -548,34 +575,34 @@ function BlockProperties({
             <span className="text-[10px] font-semibold text-foreground-subtle uppercase">{sub.type}</span>
             <div className="flex gap-1">
               <button onClick={() => moveSub(index, -1)} disabled={index === 0} className="px-1.5 py-0.5 rounded text-[10px] bg-background-muted text-foreground-muted hover:bg-background-elev disabled:opacity-30">↑</button>
-              <button onClick={() => moveSub(index, 1)} disabled={index === subs.length - 1} className="px-1.5 py-0.5 rounded text-[10px] bg-background-muted text-foreground-muted hover:bg-background-elev disabled:opacity-30">↓</button>
+              <button onClick={() => moveSub(index, 1)} disabled={index === column.length - 1} className="px-1.5 py-0.5 rounded text-[10px] bg-background-muted text-foreground-muted hover:bg-background-elev disabled:opacity-30">↓</button>
               <button onClick={() => removeSub(index)} className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-600 hover:bg-red-200">×</button>
             </div>
           </div>
           {sub.type === "text" && (
             <>
               <Textarea
-                value={sc.text || ""}
+                value={str(sc.text)}
                 onChange={(e) => updateSub(index, { text: e.target.value })}
                 rows={2}
                 className="rounded-lg border-border text-sm resize-none"
               />
               <div className="grid grid-cols-2 gap-2">
-                <Input type="number" value={sc.fontSize || 16} onChange={(e) => updateSub(index, { fontSize: Number(e.target.value) })} className="h-7 text-xs" placeholder="Tamaño" />
-                <Input type="color" value={sc.color || "#1a1a1a"} onChange={(e) => updateSub(index, { color: e.target.value })} className="h-7 text-xs p-1" />
+                <Input type="number" value={num(sc.fontSize, 16)} onChange={(e) => updateSub(index, { fontSize: Number(e.target.value) })} className="h-7 text-xs" placeholder="Tamaño" />
+                <Input type="color" value={str(sc.color, "#1a1a1a")} onChange={(e) => updateSub(index, { color: e.target.value })} className="h-7 text-xs p-1" />
               </div>
             </>
           )}
           {sub.type === "image" && (
-            <ImageUploadField value={sc.src || ""} onChange={(src) => updateSub(index, { src })} />
+            <ImageUploadField value={str(sc.src)} onChange={(src) => updateSub(index, { src })} />
           )}
           {sub.type === "button" && (
             <>
-              <Input value={sc.text || ""} onChange={(e) => updateSub(index, { text: e.target.value })} className="h-7 text-xs" placeholder="Texto" />
-              <Input value={sc.url || ""} onChange={(e) => updateSub(index, { url: e.target.value })} className="h-7 text-xs" placeholder="URL" />
+              <Input value={str(sc.text)} onChange={(e) => updateSub(index, { text: e.target.value })} className="h-7 text-xs" placeholder="Texto" />
+              <Input value={str(sc.url)} onChange={(e) => updateSub(index, { url: e.target.value })} className="h-7 text-xs" placeholder="URL" />
               <div className="grid grid-cols-2 gap-2">
-                <Input type="color" value={sc.bgColor || "#3fa844"} onChange={(e) => updateSub(index, { bgColor: e.target.value })} className="h-7 text-xs p-1" />
-                <Input type="color" value={sc.textColor || "#fff"} onChange={(e) => updateSub(index, { textColor: e.target.value })} className="h-7 text-xs p-1" />
+                <Input type="color" value={str(sc.bgColor, "#3fa844")} onChange={(e) => updateSub(index, { bgColor: e.target.value })} className="h-7 text-xs p-1" />
+                <Input type="color" value={str(sc.textColor, "#fff")} onChange={(e) => updateSub(index, { textColor: e.target.value })} className="h-7 text-xs p-1" />
               </div>
             </>
           )}
@@ -600,8 +627,8 @@ function BlockProperties({
           </div>
         </div>
         <div className="space-y-2">
-          {subs.map(renderSubEditor)}
-          {subs.length === 0 && (
+          {column.map(renderSubEditor)}
+          {column.length === 0 && (
             <p className="text-xs text-foreground-subtle italic">Vacío — agrega un bloque</p>
           )}
         </div>
@@ -614,7 +641,7 @@ function BlockProperties({
       return (
         <div className="space-y-3">
           {field("Texto del logo", "logoText")}
-          <ImageUploadField value={c.logoUrl || ""} onChange={(logoUrl) => onChange({ ...c, logoUrl })} />
+          <ImageUploadField value={str(c.logoUrl)} onChange={(logoUrl) => onChange({ ...c, logoUrl })} />
           {alignField("Alineación", "logoAlign")}
           {field("Color de fondo", "bgColor", "color")}
           {field("Padding", "padding", "number")}
@@ -636,7 +663,7 @@ function BlockProperties({
     case "image":
       return (
         <div className="space-y-3">
-          <ImageUploadField value={c.src || ""} onChange={(src) => onChange({ ...c, src })} />
+          <ImageUploadField value={str(c.src)} onChange={(src) => onChange({ ...c, src })} />
           {field("Texto alternativo", "alt")}
           {alignField("Alineación", "align")}
           {field("Ancho", "width")}
@@ -694,15 +721,15 @@ function BlockProperties({
             <div className="flex items-center justify-between">
               <Label className="text-xs text-foreground-subtle">Redes sociales</Label>
               <button
-                onClick={() => onChange({ ...c, socialLinks: [...(Array.isArray(c.socialLinks) ? c.socialLinks : []), { platform: "instagram", url: "https://", color: "#e1306c" }] })}
+                onClick={() => onChange({ ...c, socialLinks: [...socials(c.socialLinks), { platform: "instagram", url: "https://", color: "#e1306c" }] })}
                 className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 <Plus className="w-3 h-3" /> Agregar
               </button>
             </div>
-            {(Array.isArray(c.socialLinks) ? c.socialLinks : []).map((link: any, index: number) => {
-              const links = c.socialLinks as any[]
-              const updateSocial = (changes: Record<string, string>) => {
+            {socials(c.socialLinks).map((link, index) => {
+              const links = socials(c.socialLinks)
+              const updateSocial = (changes: Partial<SocialLink>) => {
                 const next = [...links]
                 next[index] = { ...next[index], ...changes }
                 onChange({ ...c, socialLinks: next })
@@ -737,7 +764,7 @@ function BlockProperties({
                 </div>
               )
             })}
-            {(!Array.isArray(c.socialLinks) || c.socialLinks.length === 0) && (
+            {socials(c.socialLinks).length === 0 && (
               <p className="text-xs text-foreground-subtle">Agrega enlaces para mostrarlos en una línea centrada.</p>
             )}
           </div>
@@ -761,7 +788,7 @@ function BlockProperties({
           <div className="space-y-1.5">
             <Label className="text-xs text-foreground-subtle">Ratio</Label>
             <select
-              value={c.ratio || "50/50"}
+              value={str(c.ratio, "50/50")}
               onChange={(e) => onChange({ ...c, ratio: e.target.value })}
               className="w-full h-8 rounded-lg border border-border bg-background text-sm px-2"
             >
@@ -787,33 +814,35 @@ function BlockPreview({ block }: { block: EmailBlock }) {
   switch (block.type) {
     case "header":
       return (
-        <div style={{ padding: c.padding, backgroundColor: c.bgColor, textAlign: c.logoAlign }}>
+        <div style={{ padding: num(c.padding, 20), backgroundColor: str(c.bgColor, "#ffffff"), textAlign: align(c.logoAlign) }}>
           {c.logoUrl ? (
-            <img src={c.logoUrl} alt={c.logoText} className="max-w-[180px] h-auto inline-block" />
+            // eslint-disable-next-line @next/next/no-img-element -- previsualiza el HTML del email, que usa <img> crudo
+            <img src={str(c.logoUrl)} alt={str(c.logoText)} className="max-w-[180px] h-auto inline-block" />
           ) : (
-            <span className="text-2xl font-bold text-foreground">{c.logoText}</span>
+            <span className="text-2xl font-bold text-foreground">{str(c.logoText)}</span>
           )}
         </div>
       )
 
     case "text":
       return (
-        <div style={{ padding: c.padding, textAlign: c.align }}>
-          <p style={{ margin: 0, fontSize: c.fontSize, lineHeight: c.lineHeight, color: c.color }}>
-            {c.text}
+        <div style={{ padding: num(c.padding, 20), textAlign: align(c.align) }}>
+          <p style={{ margin: 0, fontSize: num(c.fontSize, 16), lineHeight: num(c.lineHeight, 1.6), color: str(c.color, "#1a1a1a") }}>
+            {str(c.text)}
           </p>
         </div>
       )
 
     case "image":
       return (
-        <div style={{ padding: c.padding, textAlign: c.align }}>
+        <div style={{ padding: num(c.padding, 20), textAlign: align(c.align) }}>
           {c.src ? (
+            // eslint-disable-next-line @next/next/no-img-element -- previsualiza el HTML del email, que usa <img> crudo
             <img
-              src={c.src}
-              alt={c.alt}
+              src={str(c.src)}
+              alt={str(c.alt)}
               className="max-w-full h-auto inline-block"
-              style={{ width: c.width, borderRadius: c.borderRadius }}
+              style={{ width: str(c.width, "100%"), borderRadius: num(c.borderRadius, 8) }}
             />
           ) : (
             <div className="w-full h-32 bg-background-muted rounded-lg flex items-center justify-center text-foreground-subtle">
@@ -825,24 +854,24 @@ function BlockPreview({ block }: { block: EmailBlock }) {
       )
 
     case "button": {
-      const widthClass = c.fullWidth ? "w-full" : "inline-block"
+      const widthClass = bool(c.fullWidth) ? "w-full" : "inline-block"
       return (
-        <div style={{ padding: c.padding, textAlign: c.align }}>
+        <div style={{ padding: num(c.padding, 12), textAlign: align(c.align) }}>
           <a
-            href={c.url}
+            href={str(c.url, "#")}
             target="_blank"
             rel="noreferrer"
             className={`${widthClass} no-underline font-semibold text-center transition-opacity hover:opacity-90`}
             style={{
-              backgroundColor: c.bgColor,
-              color: c.textColor,
-              fontSize: c.fontSize,
-              padding: `${c.padding}px 24px`,
-              borderRadius: c.borderRadius,
+              backgroundColor: str(c.bgColor, "#3fa844"),
+              color: str(c.textColor, "#ffffff"),
+              fontSize: num(c.fontSize, 16),
+              padding: `${num(c.padding, 12)}px 24px`,
+              borderRadius: num(c.borderRadius, 8),
               display: "inline-block",
             }}
           >
-            {c.text}
+            {str(c.text)}
           </a>
         </div>
       )
@@ -850,12 +879,12 @@ function BlockPreview({ block }: { block: EmailBlock }) {
 
     case "divider":
       return (
-        <div style={{ padding: `${c.padding}px 0` }}>
+        <div style={{ padding: `${num(c.padding, 20)}px 0` }}>
           <div
             style={{
-              width: c.width,
-              height: c.height,
-              backgroundColor: c.color,
+              width: str(c.width, "100%"),
+              height: num(c.height, 1),
+              backgroundColor: str(c.color, "#e5e5e5"),
               margin: "0 auto",
             }}
           />
@@ -863,13 +892,13 @@ function BlockPreview({ block }: { block: EmailBlock }) {
       )
 
     case "footer": {
-      const unsub = c.showUnsubscribe ? ` | ${c.unsubscribeText}` : ""
-      const socialLinks = Array.isArray(c.socialLinks) ? c.socialLinks : []
+      const unsub = bool(c.showUnsubscribe) ? ` | ${str(c.unsubscribeText)}` : ""
+      const socialLinks = socials(c.socialLinks)
       return (
-        <div style={{ padding: c.padding, backgroundColor: c.bgColor, textAlign: c.align }}>
+        <div style={{ padding: num(c.padding, 20), backgroundColor: str(c.bgColor, "#f5f5f5"), textAlign: align(c.align) }}>
           {socialLinks.length > 0 && (
             <div className="flex justify-center gap-2 mb-3">
-              {socialLinks.map((link: any, index: number) => (
+              {socialLinks.map((link, index) => (
                 <span
                   key={`${link.platform}-${index}`}
                   className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[10px] font-bold text-white"
@@ -880,34 +909,36 @@ function BlockPreview({ block }: { block: EmailBlock }) {
               ))}
             </div>
           )}
-          <p style={{ margin: 0, fontSize: c.fontSize, color: c.color }}>
-            {c.text}{unsub}
+          <p style={{ margin: 0, fontSize: num(c.fontSize, 12), color: str(c.color, "#a3a3a3") }}>
+            {str(c.text)}{unsub}
           </p>
         </div>
       )
     }
 
     case "column-2": {
-      const left: any[] = Array.isArray(c.left) ? c.left : []
-      const right: any[] = Array.isArray(c.right) ? c.right : []
       const ratios = c.ratio === "33/66" ? ["33%", "67%"] : c.ratio === "66/33" ? ["67%", "33%"] : ["50%", "50%"]
 
-      const renderSubPreview = (sub: any) => {
-        if (!sub) return null
+      const renderSubPreview = (sub: SubBlock) => {
         const sc = sub.content || {}
         if (sub.type === "text") {
-          return <p style={{ margin: "0 0 8px", fontSize: sc.fontSize || 16, lineHeight: sc.lineHeight || 1.6, color: sc.color || "#1a1a1a" }}>{sc.text || ""}</p>
+          return <p style={{ margin: "0 0 8px", fontSize: num(sc.fontSize, 16), lineHeight: num(sc.lineHeight, 1.6), color: str(sc.color, "#1a1a1a") }}>{str(sc.text)}</p>
         }
         if (sub.type === "image") {
-          return sc.src ? <img src={sc.src} alt="" className="w-full h-auto mb-2" style={{ borderRadius: sc.borderRadius || 0 }} /> : <div className="w-full h-16 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs mb-2">Sin imagen</div>
+          return sc.src ? (
+            // eslint-disable-next-line @next/next/no-img-element -- previsualiza el HTML del email, que usa <img> crudo
+            <img src={str(sc.src)} alt={str(sc.alt)} className="w-full h-auto mb-2" style={{ borderRadius: num(sc.borderRadius) }} />
+          ) : (
+            <div className="w-full h-16 bg-background-muted rounded flex items-center justify-center text-foreground-subtle text-xs mb-2">Sin imagen</div>
+          )
         }
         if (sub.type === "button") {
           return (
             <span
               className="inline-block font-semibold mb-2"
-              style={{ backgroundColor: sc.bgColor || "#3fa844", color: sc.textColor || "#fff", padding: "8px 16px", borderRadius: sc.borderRadius || 8 }}
+              style={{ backgroundColor: str(sc.bgColor, "#3fa844"), color: str(sc.textColor, "#fff"), padding: "8px 16px", borderRadius: num(sc.borderRadius, 8) }}
             >
-              {sc.text || "Botón"}
+              {str(sc.text, "Botón")}
             </span>
           )
         }
@@ -915,10 +946,10 @@ function BlockPreview({ block }: { block: EmailBlock }) {
       }
 
       return (
-        <div style={{ padding: c.padding, backgroundColor: c.bgColor }}>
+        <div style={{ padding: num(c.padding, 20), backgroundColor: str(c.bgColor, "#ffffff") }}>
           <div className="flex gap-4">
-            <div style={{ width: ratios[0] }}>{left.map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
-            <div style={{ width: ratios[1] }}>{right.map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
+            <div style={{ width: ratios[0] }}>{subs(c.left).map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
+            <div style={{ width: ratios[1] }}>{subs(c.right).map((sub, i) => <div key={i}>{renderSubPreview(sub)}</div>)}</div>
           </div>
         </div>
       )
@@ -969,7 +1000,7 @@ export function EmailBuilder({
     setSelectedId(newBlock.id)
   }
 
-  const updateBlock = (id: string, content: Record<string, any>) => {
+  const updateBlock = (id: string, content: BlockContent) => {
     const newBlocks = blocks.map((b) => (b.id === id ? { ...b, content } : b))
     updateBlocks(newBlocks)
   }

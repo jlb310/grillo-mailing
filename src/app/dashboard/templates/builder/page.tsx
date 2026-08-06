@@ -11,6 +11,12 @@ import { EmailBuilder, type EmailBlock } from "@/components/email-builder"
 import { ArrowLeft, Save, Eye, Code, Palette } from "lucide-react"
 import Link from "next/link"
 
+interface OrganizationOption {
+  id: string
+  name: string
+  brandColor?: string | null
+}
+
 export default function TemplateBuilderPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -52,13 +58,13 @@ export default function TemplateBuilderPage() {
     // SUPERADMIN
     fetch("/api/organizations")
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: OrganizationOption[]) => {
         if (!Array.isArray(data) || data.length === 0) {
           setLoadingOrg(false)
           return
         }
         const saved = localStorage.getItem("grillo-active-org")
-        const org = saved ? data.find((o: any) => o.id === saved) : null
+        const org = saved ? data.find((o) => o.id === saved) : null
         const fallback = org || data[0]
         if (fallback) {
           localStorage.setItem("grillo-active-org", fallback.id)

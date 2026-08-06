@@ -1,5 +1,5 @@
 export default function UnsubscribePage({ searchParams }: { searchParams: { email?: string; org?: string } }) {
-  const { email, org } = searchParams
+  const { email } = searchParams
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">

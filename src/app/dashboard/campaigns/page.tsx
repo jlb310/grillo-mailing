@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Send, Plus, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react"
@@ -30,19 +30,18 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchCampaigns()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin])
-
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/campaigns?organizationId=${activeOrg}` : "/api/campaigns"
     const res = await fetch(url)
     const data = await res.json()
     setCampaigns(data)
     setLoading(false)
-  }
+  }, [isSuperAdmin])
+
+  useEffect(() => {
+    fetchCampaigns()
+  }, [fetchCampaigns])
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(results)
   } catch (error) {
+    console.error("Import contacts error:", error)
     return NextResponse.json({ error: "Failed to import contacts" }, { status: 500 })
   }
 }

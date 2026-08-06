@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { BarChart3, Mail, Eye, MousePointer, TrendingUp } from "lucide-react"
+import { Mail, Eye, MousePointer, TrendingUp } from "lucide-react"
 
 interface AnalyticsData {
   campaigns: {
@@ -34,19 +34,18 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchAnalytics()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/analytics?organizationId=${activeOrg}` : "/api/analytics"
     const res = await fetch(url)
     const analyticsData = await res.json()
     setData(analyticsData)
     setLoading(false)
-  }
+  }, [isSuperAdmin])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

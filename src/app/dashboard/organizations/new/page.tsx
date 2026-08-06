@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, Building2, Save } from "lucide-react"
+import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 
 export default function NewOrganizationPage() {

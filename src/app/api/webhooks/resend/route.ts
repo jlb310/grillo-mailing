@@ -129,6 +129,6 @@ export async function POST(req: NextRequest) {
 }
 
 // Resend may send GET requests for verification
-export async function GET(req: NextRequest) {
+export async function GET() {
   return NextResponse.json({ status: "ok" })
 }

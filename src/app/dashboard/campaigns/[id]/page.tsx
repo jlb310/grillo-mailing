@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,7 +40,8 @@ export default function CampaignDetailPage() {
   const [testing, setTesting] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [testResult, setTestResult] = useState<{ type: "success" | "error"; message: string } | null>(null)
-  const [id, setId] = useState<string>("")
+  const params = useParams<{ id: string }>()
+  const id = params?.id ?? ""
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({ name: "", subject: "", fromName: "", fromEmail: "", replyTo: "" })
   const [actionLoading, setActionLoading] = useState(false)
@@ -48,17 +49,10 @@ export default function CampaignDetailPage() {
   const [contentDraft, setContentDraft] = useState<{ blocks: EmailBlock[]; htmlContent: string; textContent: string } | null>(null)
   const [savingContent, setSavingContent] = useState(false)
 
-  useEffect(() => {
-    const pathParts = window.location.pathname.split("/")
-    const campaignId = pathParts[pathParts.length - 1]
-    setId(campaignId)
-    if (campaignId) fetchCampaign(campaignId)
-  }, [])
-
-  const fetchCampaign = async (campaignId: string) => {
+  const fetchCampaign = useCallback(async (campaignId: string) => {
     const res = await fetch(`/api/campaigns/${campaignId}`)
     if (!res.ok) {
-      window.location.href = "/dashboard/campaigns"
+      router.push("/dashboard/campaigns")
       return
     }
     const data = await res.json()
@@ -71,7 +65,11 @@ export default function CampaignDetailPage() {
       replyTo: data.replyTo || "",
     })
     setLoading(false)
-  }
+  }, [router])
+
+  useEffect(() => {
+    if (id) fetchCampaign(id)
+  }, [id, fetchCampaign])
 
   const handleSaveEdit = async () => {
     if (!id) return

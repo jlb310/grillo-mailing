@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { email, firstName, lastName, phone, company, organizationId, metadata } = body
+    const { email, firstName, lastName, phone, company, metadata } = body
 
     if (session.user.role !== UserRole.SUPERADMIN && body.organizationId && body.organizationId !== session.user.organizationId) {
       return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(contact)
   } catch (error) {
+    console.error("Create contact error:", error)
     return NextResponse.json({ error: "Failed to create contact" }, { status: 500 })
   }
 }

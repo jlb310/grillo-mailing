@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, description, organizationId } = body
+    const { name, description } = body
 
     if (session.user.role !== UserRole.SUPERADMIN && body.organizationId && body.organizationId !== session.user.organizationId) {
       return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(list)
   } catch (error) {
+    console.error("Create contact list error:", error)
     return NextResponse.json({ error: "Failed to create list" }, { status: 500 })
   }
 }

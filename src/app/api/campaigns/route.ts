@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, subject, htmlContent, textContent, blocks, fromName, fromEmail, replyTo, domainId, contactListId, templateId, organizationId, scheduledAt, status } = body
+    const { name, subject, htmlContent, textContent, blocks, fromName, fromEmail, replyTo, domainId, contactListId, templateId, scheduledAt, status } = body
 
     if (session.user.role !== UserRole.SUPERADMIN && body.organizationId && body.organizationId !== session.user.organizationId) {
       return NextResponse.json({ error: "No tienes acceso a esta organización" }, { status: 403 })

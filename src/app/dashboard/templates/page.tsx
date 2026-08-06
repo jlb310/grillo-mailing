@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,19 +24,18 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchTemplates()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin])
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const url = activeOrg ? `/api/templates?organizationId=${activeOrg}` : "/api/templates"
     const res = await fetch(url)
     const data = await res.json()
     setTemplates(data)
     setLoading(false)
-  }
+  }, [isSuperAdmin])
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
 
   return (
     <div className="space-y-8">
