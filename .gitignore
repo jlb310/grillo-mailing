@@ -40,4 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# uploads locales (se sirven públicamente desde volumes en prod)
+/public/logos/
+/public/programas/
+/public/uploads/
+
 /lib/generated/prisma
