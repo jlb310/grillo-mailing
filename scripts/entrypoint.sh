@@ -3,18 +3,17 @@ set -e
 
 echo "🏗️  Iniciando Grillo Mailing..."
 
-# Postgres vive en otro contenedor (servicio grillo-mailing-db de Dokploy). Si la
-# app arranca antes de que acepte conexiones, `migrate deploy` falla y el
-# contenedor entra en reinicio. Esperamos con un backoff acotado.
+# Postgres vive en otro contenedor. Si la app arranca antes de que acepte
+# conexiones, `migrate deploy` falla. Esperamos con retry rápido (max ~15s).
 echo "⏳ Esperando a Postgres..."
 i=1
 until node -e 'const{Client}=require("pg");const c=new Client({connectionString:process.env.DATABASE_URL});c.connect().then(()=>c.end()).catch(()=>process.exit(1))' 2>/dev/null; do
-  if [ "$i" -ge 30 ]; then
-    echo "❌ Postgres no respondió tras 30 intentos. Revisá DATABASE_URL y que el servicio esté arriba."
+  if [ "$i" -ge 15 ]; then
+    echo "❌ Postgres no respondió tras 15 intentos. Revisá DATABASE_URL."
     exit 1
   fi
   i=$((i + 1))
-  sleep 2
+  sleep 1
 done
 echo "✅ Postgres responde"
 
@@ -22,10 +21,7 @@ echo "✅ Postgres responde"
 echo "📦 Ejecutando migraciones de Prisma..."
 npx prisma migrate deploy
 
-# Prisma client is already generated inside the image at build time
-
-# Seed admin user (idempotent). Vive en su propio archivo: inline con `node -e`
-# la shell expandía `$disconnect` como variable vacía y rompía el script.
+# Seed admin user (idempotent — skipped if admin already exists)
 echo "🌱 Verificando seed..."
 node /app/scripts/seed.cjs
 
