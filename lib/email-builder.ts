@@ -14,6 +14,7 @@ export interface ProductItem {
   price: string;
   buttonText: string;
   buttonUrl: string;
+  buttonColor: string;
 }
 
 export interface SocialItem {
@@ -277,8 +278,9 @@ function renderProductCard(p: ProductItem, color: string, lone = false): string 
   const price = p.price
     ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:${color};line-height:1.2;">${escapeHtml(p.price)}</div></td></tr>`
     : "";
+  const buttonColor = p.buttonColor || color;
   const button = p.buttonText && p.buttonUrl
-    ? `<tr><td align="center" style="padding:10px 14px 14px;">${renderProductButton(p.buttonText, p.buttonUrl, color)}</td></tr>`
+    ? `<tr><td align="center" style="padding:10px 14px 14px;">${renderProductButton(p.buttonText, p.buttonUrl, buttonColor)}</td></tr>`
     : `<tr><td style="padding:14px;">&nbsp;</td></tr>`;
   return `
 <td width="${tdWidth}" valign="top" align="${lone ? "center" : "left"}" style="padding:6px;">

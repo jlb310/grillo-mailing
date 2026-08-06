@@ -148,7 +148,7 @@ function EmailBuilderForm() {
   }
 
   function addProduct() {
-    setProducts((prev) => [...prev, { id: uid(), imageUrl: "", title: "", price: "", buttonText: "Comprar", buttonUrl: "https://" }]);
+    setProducts((prev) => [...prev, { id: uid(), imageUrl: "", title: "", price: "", buttonText: "Comprar", buttonUrl: "https://", buttonColor: "" }]);
   }
 
   function updateProduct(id: string, field: keyof ProductItem, value: string) {
@@ -472,6 +472,11 @@ function EmailBuilderForm() {
                       <div className="space-y-1">
                         <Input placeholder="Texto del botón" value={p.buttonText} onChange={(e) => updateProduct(p.id, "buttonText", e.target.value)} className="text-sm" />
                         <Input placeholder="URL del botón (https://...)" value={p.buttonUrl} onChange={(e) => updateProduct(p.id, "buttonUrl", e.target.value)} className="text-sm" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400">Color del botón</label>
+                        <input type="color" value={p.buttonColor || headerColor} onChange={(e) => updateProduct(p.id, "buttonColor", e.target.value)} className="w-7 h-7 rounded cursor-pointer border" />
+                        <Input value={p.buttonColor} onChange={(e) => updateProduct(p.id, "buttonColor", e.target.value)} className="text-sm flex-1" placeholder={headerColor} />
                       </div>
                     </div>
                   ))}
