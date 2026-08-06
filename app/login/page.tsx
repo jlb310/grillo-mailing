@@ -45,7 +45,7 @@ export default function LoginPage() {
             <em className="italic text-[#69bc57]">sin idas y vueltas.</em>
           </h2>
           <p className="text-[#8a9288] text-sm leading-relaxed max-w-md">
-            Gestión de campañas, eventos, encuestas de satisfacción y certificados automáticos — todo desde un solo lugar.
+            Gestión de campañas, contactos y certificados automáticos — todo desde un solo lugar.
           </p>
         </div>
         <p className="text-[#8a9288]/40 text-xs">© 2026 Grillo</p>

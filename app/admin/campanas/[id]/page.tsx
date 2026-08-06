@@ -38,7 +38,7 @@ interface Campaign {
   scheduledAt: string | null;
   htmlBody: string;
   notifyEmails: string[];
-  event: { id: string; title: string };
+  empresa: { id: string; name: string };
   sendLogs: SendLog[];
   contactGroups?: { id: string; name: string; _count: { contacts: number } }[];
   metrics?: Metrics;
@@ -132,10 +132,10 @@ export default function CampanaDetailPage() {
     const form = new FormData();
     form.append("file", file);
     try {
-      const res = await fetch(`/api/eventos/${campaign.event.id}/contactos`, { method: "POST", body: form });
+      const res = await fetch(`/api/empresas/${campaign.empresa.id}/contactos`, { method: "POST", body: form });
       const data = await res.json();
       if (res.ok) {
-        const parts = [`${data.imported} contactos importados al evento`];
+        const parts = [`${data.imported} contactos importados a la empresa`];
         if (data.duplicates) parts.push(`${data.duplicates} duplicados omitidos`);
         if (data.invalid) parts.push(`${data.invalid} inválidos descartados`);
         setMsg(`✅ ${parts.join(" · ")}`);
@@ -257,7 +257,7 @@ export default function CampanaDetailPage() {
           </Link>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{campaign.subject}</h1>
-            <p className="text-sm text-gray-500">{campaign.event.title}</p>
+            <p className="text-sm text-gray-500">{campaign.empresa.name}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -485,8 +485,8 @@ export default function CampanaDetailPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-400" />
-                <Link href={`/admin/eventos/${campaign.event.id}`} className="text-sm font-medium text-blue-600 hover:underline">
-                  Ver evento →
+                <Link href={`/admin/empresas/${campaign.empresa.id}`} className="text-sm font-medium text-blue-600 hover:underline">
+                  Ver empresa →
                 </Link>
               </div>
               <Button variant="outline" size="sm" disabled={importing} onClick={() => importRef.current?.click()} className="h-7 text-xs gap-1.5">
@@ -494,13 +494,13 @@ export default function CampanaDetailPage() {
                 {importing ? "Importando..." : "Agregar contactos"}
               </Button>
             </div>
-            <p className="text-xs text-gray-400 mt-1.5">CSV o Excel — se agregan al evento sin duplicar</p>
+            <p className="text-xs text-gray-400 mt-1.5">CSV o Excel — se agregan a la empresa sin duplicar</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-5">
-            <SelectorGrupos campaignId={campaign.id} eventId={campaign.event.id} disabled={campaign.status === "SENT"} />
+            <SelectorGrupos campaignId={campaign.id} empresaId={campaign.empresa.id} disabled={campaign.status === "SENT"} />
           </CardContent>
         </Card>
       </div>

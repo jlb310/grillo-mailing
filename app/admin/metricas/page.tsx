@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTrackingStatus } from "@/lib/resend-status";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
+import { scopeWhere } from "@/lib/empresa";
 
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -30,10 +31,10 @@ function NoTracking() {
 export default async function MetricasPage() {
   const [campaigns, tracking] = await Promise.all([
     prisma.campaign.findMany({
-      where: { status: "SENT" },
+      where: { status: "SENT", ...(await scopeWhere()) },
       orderBy: { sentAt: "desc" },
       include: {
-        event: { select: { title: true } },
+        empresa: { select: { name: true } },
         sendLogs: {
           select: { openedAt: true, clickedAt: true, bouncedAt: true, contact: { select: { unsubscribed: true } } },
         },
@@ -154,7 +155,7 @@ export default async function MetricasPage() {
                         {c.subject}
                       </Link>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {c.event.title}
+                        {c.empresa.name}
                         {c.sentAt && <> · {new Date(c.sentAt).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" })}</>}
                       </p>
                     </div>

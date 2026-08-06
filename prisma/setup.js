@@ -1,36 +1,74 @@
-// Creates/ensures the default Grillo admin user if none exists. Uses pg directly — no Prisma client needed.
+/* eslint-disable @typescript-eslint/no-require-imports */
+// Creates/ensures the super admin and the Lenyes empresa + admin. Uses pg directly — no Prisma client needed.
 const { Client } = require("pg");
 const bcrypt = require("bcryptjs");
+
+const EMPRESA_NAME = "Lenyes";
+const EMPRESA_SLUG = "lenyes";
+const EMPRESA_DESC = "Empresa piloto de Grillo Mailing";
 
 async function main() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
 
-  const email = "admin@grillo.click";
-  const name = "Admin Grillo";
-  const password = process.env.ADMIN_PASSWORD || "grillo2026";
-
-  const { rows } = await client.query('SELECT id, email FROM "AdminUser" LIMIT 1');
-  if (rows.length === 0) {
-    const hash = await bcrypt.hash(password, 12);
-    await client.query(
-      'INSERT INTO "AdminUser" (id, email, name, password, "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())',
-      [email, name, hash]
-    );
-    console.log(`Admin user created: ${email}`);
+  // --- Empresa Lenyes ---
+  let empresaId = null;
+  const empresaRes = await client.query('SELECT id FROM "Empresa" WHERE slug = $1', [EMPRESA_SLUG]);
+  if (empresaRes.rows.length > 0) {
+    empresaId = empresaRes.rows[0].id;
+    console.log(`Empresa "${EMPRESA_NAME}" ya existe (${empresaId}).`);
   } else {
-    const existing = rows[0];
-    if (existing.email === email) {
-      console.log(`Admin user already exists (${email}), skipping.`);
-    } else {
-      // Migrate a previous default admin (e.g. admin@digitals.cl) to the Grillo admin.
-      const hash = await bcrypt.hash(password, 12);
+    const ins = await client.query(
+      'INSERT INTO "Empresa" (id, name, slug, description, "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW()) RETURNING id',
+      [EMPRESA_NAME, EMPRESA_SLUG, EMPRESA_DESC]
+    );
+    empresaId = ins.rows[0].id;
+    console.log(`Empresa "${EMPRESA_NAME}" creada (${empresaId}).`);
+  }
+
+  // --- Super admin ---
+  const superEmail = "admin@grillo.click";
+  const superName = "Admin Grillo";
+  const superPassword = process.env.ADMIN_PASSWORD || "grillo2026";
+
+  const superRes = await client.query('SELECT id FROM "AdminUser" WHERE email = $1', [superEmail]);
+  if (superRes.rows.length > 0) {
+    await client.query(
+      'UPDATE "AdminUser" SET role = $1, name = $2, "updatedAt" = NOW() WHERE email = $3',
+      ["SUPER_ADMIN", superName, superEmail]
+    );
+    console.log(`Super admin ${superEmail} actualizado a SUPER_ADMIN.`);
+  } else {
+    const hash = await bcrypt.hash(superPassword, 12);
+    await client.query(
+      'INSERT INTO "AdminUser" (id, email, name, password, role, "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())',
+      [superEmail, superName, hash, "SUPER_ADMIN"]
+    );
+    console.log(`Super admin creado: ${superEmail}`);
+  }
+
+  // --- Admin de Lenyes (opcional, por env) ---
+  const lenyesEmail = process.env.LENYES_ADMIN_EMAIL;
+  if (lenyesEmail) {
+    const lenyesPassword = process.env.LENYES_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "grillo2026";
+    const lenyesName = process.env.LENYES_ADMIN_NAME || "Admin Lenyes";
+    const lenyesRes = await client.query('SELECT id FROM "AdminUser" WHERE email = $1', [lenyesEmail]);
+    if (lenyesRes.rows.length > 0) {
       await client.query(
-        'UPDATE "AdminUser" SET email = $1, name = $2, password = $3, "updatedAt" = NOW() WHERE id = $4',
-        [email, name, hash, existing.id]
+        'UPDATE "AdminUser" SET role = $1, "empresaId" = $2, name = $3, "updatedAt" = NOW() WHERE email = $4',
+        ["ADMIN", empresaId, lenyesName, lenyesEmail]
       );
-      console.log(`Admin user migrated: ${existing.email} -> ${email}`);
+      console.log(`Admin Lenyes actualizado: ${lenyesEmail}`);
+    } else {
+      const hash = await bcrypt.hash(lenyesPassword, 12);
+      await client.query(
+        'INSERT INTO "AdminUser" (id, email, name, password, role, "empresaId", "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), NOW())',
+        [lenyesEmail, lenyesName, hash, "ADMIN", empresaId]
+      );
+      console.log(`Admin Lenyes creado: ${lenyesEmail}`);
     }
+  } else {
+    console.log("LENYES_ADMIN_EMAIL no definido — no se crea admin de Lenyes.");
   }
 
   await client.end();

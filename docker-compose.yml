@@ -16,6 +16,11 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       # Password del admin creado por prisma/setup.js. Si no se define, usa grillo2026.
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Admin de la empresa Lenyes que crea prisma/setup.js. Sin estas vars solo
+      # existe el super admin (admin@grillo.click, rol SUPER_ADMIN).
+      - LENYES_ADMIN_EMAIL=${LENYES_ADMIN_EMAIL}
+      - LENYES_ADMIN_PASSWORD=${LENYES_ADMIN_PASSWORD}
+      - LENYES_ADMIN_NAME=${LENYES_ADMIN_NAME}
       - CERTIFICATES_PATH=/app/public/certificates
     volumes:
       - certificates:/app/public/certificates

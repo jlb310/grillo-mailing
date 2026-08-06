@@ -16,7 +16,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const clone = await prisma.campaign.create({
     data: {
-      eventId:      src.eventId,
+      empresaId:    src.empresaId,
       subject:      `${src.subject} (copia)`,
       htmlBody:     src.htmlBody,
       emailTitle:   src.emailTitle,

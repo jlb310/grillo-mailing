@@ -8,42 +8,41 @@ datasource db {
 }
 
 model AdminUser {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  email     String     @unique
   password  String
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      AdminRole  @default(ADMIN)
+  empresaId String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  empresa Empresa? @relation(fields: [empresaId], references: [id], onDelete: SetNull)
 }
 
-model Event {
-  id             String      @id @default(cuid())
-  title          String
-  description    String?
-  date           DateTime
-  location       String?
-  horasLectivas  Int         @default(0)
-  firmante       String?
-  firmanteTitle  String?
-  status         EventStatus @default(DRAFT)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  campaigns      Campaign[]
-  contacts       Contact[]
-  surveys        Survey[]
-  contactGroups  ContactGroup[]
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
 }
 
-enum EventStatus {
-  DRAFT
-  ACTIVE
-  COMPLETED
+model Empresa {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaigns     Campaign[]
+  contacts      Contact[]
+  surveys       Survey[]
+  contactGroups ContactGroup[]
+  admins        AdminUser[]
 }
 
 model Campaign {
   id            String         @id @default(cuid())
-  eventId       String
+  empresaId     String
   subject       String
   htmlBody      String         @db.Text
   emailTitle    String?
@@ -85,7 +84,7 @@ model Campaign {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  empresa        Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   scheduledSends ScheduledSend[]
   sendLogs       SendLog[]
   contactGroups  ContactGroup[]  @relation("CampaignGroups")
@@ -100,34 +99,33 @@ enum CampaignStatus {
 
 model Contact {
   id           String   @id @default(cuid())
-  eventId      String
+  empresaId    String
   email        String
   name         String
   unsubscribed Boolean  @default(false)
   bounced      Boolean  @default(false)
-  attended     Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  event          Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  empresa        Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   scheduledSends ScheduledSend[]
   sendLogs       SendLog[]
   surveyTokens   SurveyToken[]
   groups         ContactGroup[]  @relation("ContactGroups")
 
-  @@unique([eventId, email])
+  @@unique([empresaId, email])
 }
 
 model ContactGroup {
   id        String   @id @default(cuid())
-  eventId   String
+  empresaId String
   name      String
   createdAt DateTime @default(now())
 
-  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  contacts  Contact[]  @relation("ContactGroups")
+  empresa  Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  contacts Contact[]  @relation("ContactGroups")
   campaigns Campaign[] @relation("CampaignGroups")
 
-  @@unique([eventId, name])
+  @@unique([empresaId, name])
 }
 
 model ScheduledSend {
@@ -168,11 +166,11 @@ model SendLog {
 
 model Survey {
   id        String   @id @default(cuid())
-  eventId   String
+  empresaId String
   title     String
   createdAt DateTime @default(now())
 
-  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  empresa   Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   questions Question[]
   tokens    SurveyToken[]
 }

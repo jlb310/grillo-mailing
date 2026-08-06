@@ -2,18 +2,22 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Mail, Users, TrendingUp, MousePointer, Plus, ArrowUpRight, Send } from "lucide-react";
+import { scopeWhere } from "@/lib/empresa";
 
 export default async function AdminDashboard() {
   const [campaignCount, contactCount, sendCount, recentCampaigns] =
     await Promise.all([
-      prisma.campaign.count(),
-      prisma.contact.count(),
-      prisma.sendLog.count(),
+      prisma.campaign.count({ where: await scopeWhere() }),
+      prisma.contact.count({ where: await scopeWhere() }),
+      prisma.sendLog.count({
+        where: { campaign: { ...(await scopeWhere()) } },
+      }),
       prisma.campaign.findMany({
         take: 6,
         orderBy: { createdAt: "desc" },
+        where: await scopeWhere(),
         include: {
-          event: { select: { title: true } },
+          empresa: { select: { name: true } },
           sendLogs: { select: { openedAt: true, clickedAt: true } },
           _count: { select: { sendLogs: true } },
         },
@@ -96,7 +100,7 @@ export default async function AdminDashboard() {
             <thead>
               <tr className="border-b border-gray-50">
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Campaña</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Evento</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empresa</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Enviados</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Aperturas</th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
@@ -115,7 +119,7 @@ export default async function AdminDashboard() {
                         {c.subject}
                       </Link>
                     </td>
-                    <td className="px-4 py-3.5 text-gray-400 text-xs truncate max-w-[140px]">{c.event.title}</td>
+                    <td className="px-4 py-3.5 text-gray-400 text-xs truncate max-w-[140px]">{c.empresa.name}</td>
                     <td className="px-4 py-3.5 text-right text-gray-600 font-medium">{total || "—"}</td>
                     <td className="px-4 py-3.5 text-right">
                       {rate !== null ? (

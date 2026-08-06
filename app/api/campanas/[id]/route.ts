@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildEmailHtml } from "@/lib/email-builder";
+import { canAccessEmpresa } from "@/lib/empresa";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -11,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
-      event: true,
+      empresa: true,
       sendLogs: {
         include: { contact: true },
         orderBy: { createdAt: "desc" },
@@ -20,6 +21,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   });
 
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canAccessEmpresa(campaign.empresaId))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   const total      = campaign.sendLogs.length;
   const sentCount  = campaign.sendLogs.filter(l => l.resendId).length;
@@ -51,6 +55,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params;
   const body = await req.json();
+
+  const existing = await prisma.campaign.findUnique({ where: { id }, select: { empresaId: true } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canAccessEmpresa(existing.empresaId))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const htmlBody = body.htmlBody ?? buildEmailHtml(body);
 
   const campaign = await prisma.campaign.update({
@@ -97,6 +108,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await req.json();
 
+  const existing = await prisma.campaign.findUnique({ where: { id }, select: { empresaId: true } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canAccessEmpresa(existing.empresaId))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const campaign = await prisma.campaign.update({
     where: { id },
     data: { notifyEmails: body.notifyEmails },
@@ -110,6 +127,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const existing = await prisma.campaign.findUnique({ where: { id }, select: { empresaId: true } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canAccessEmpresa(existing.empresaId))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
   await prisma.campaign.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

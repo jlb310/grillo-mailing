@@ -12,12 +12,12 @@ interface ContactGroup {
 
 interface SelectorGruposProps {
   campaignId: string;
-  eventId: string;
+  empresaId: string;
   disabled?: boolean;
   onGroupsChange?: (groupIds: string[]) => void;
 }
 
-export default function SelectorGrupos({ campaignId, eventId, disabled, onGroupsChange }: SelectorGruposProps) {
+export default function SelectorGrupos({ campaignId, empresaId, disabled, onGroupsChange }: SelectorGruposProps) {
   const [availableGroups, setAvailableGroups] = useState<ContactGroup[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -25,13 +25,13 @@ export default function SelectorGrupos({ campaignId, eventId, disabled, onGroups
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/eventos/${eventId}/grupos`).then((r) => r.json()),
+      fetch(`/api/empresas/${empresaId}/grupos`).then((r) => r.json()),
       fetch(`/api/campanas/${campaignId}/grupos`).then((r) => r.json()),
     ]).then(([all, assigned]) => {
       setAvailableGroups(all);
       setSelectedIds((assigned as ContactGroup[]).map((g) => g.id));
     });
-  }, [campaignId, eventId]);
+  }, [campaignId, empresaId]);
 
   function toggle(id: string) {
     setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -53,8 +53,8 @@ export default function SelectorGrupos({ campaignId, eventId, disabled, onGroups
   if (availableGroups.length === 0) {
     return (
       <p className="text-sm text-gray-400 italic">
-        No hay grupos en este evento.{" "}
-        <a href={`/admin/eventos/${eventId}`} className="text-[#207029] hover:underline">
+        No hay grupos en esta empresa.{" "}
+        <a href={`/admin/empresas/${empresaId}`} className="text-[#207029] hover:underline">
           Crear grupos →
         </a>
       </p>
@@ -95,7 +95,7 @@ export default function SelectorGrupos({ campaignId, eventId, disabled, onGroups
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">
           {selectedIds.length === 0
-            ? "Sin grupos seleccionados → se envía a todos los contactos del evento"
+            ? "Sin grupos seleccionados → se envía a todos los contactos de la empresa"
             : `${selectedIds.length} grupo${selectedIds.length !== 1 ? "s" : ""} · ${totalSelected} contacto${totalSelected !== 1 ? "s" : ""}`}
         </p>
         <Button

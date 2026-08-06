@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildEmailHtml } from "@/lib/email-builder";
+import { scopeWhere, canAccessEmpresa } from "@/lib/empresa";
 
 export async function GET() {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const campaigns = await prisma.campaign.findMany({
+    where: await scopeWhere(),
     orderBy: { createdAt: "desc" },
     include: {
-      event: { select: { title: true } },
+      empresa: { select: { name: true } },
       _count: { select: { sendLogs: true } },
       sendLogs: {
         select: { openedAt: true, clickedAt: true },
@@ -41,11 +43,17 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+
+  const empresaId = await canAccessEmpresa(body.empresaId)
+    ? body.empresaId
+    : null;
+  if (!empresaId) return NextResponse.json({ error: "Empresa inválida o sin acceso" }, { status: 403 });
+
   const htmlBody = body.htmlBody ?? buildEmailHtml(body);
 
   const campaign = await prisma.campaign.create({
     data: {
-      eventId: body.eventId,
+      empresaId,
       subject: body.subject || body.emailTitle || "Sin asunto",
       htmlBody,
       emailTitle: body.emailTitle,

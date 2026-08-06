@@ -11,7 +11,7 @@ import { ArrowLeft, Save, Eye, EyeOff, Plus, Trash2, Upload, Palette, Layout, Al
 import Link from "next/link";
 import RichTextEditor from "@/components/rich-text-editor";
 
-interface EventOption { id: string; title: string }
+interface EmpresaOption { id: string; name: string }
 interface CtaButton { id: string; text: string; url: string; color: string }
 
 const HEADER_COLORS = [
@@ -27,10 +27,10 @@ function EmailBuilderForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
-  const defaultEventId = searchParams.get("eventId") ?? "";
+  const defaultEmpresaId = searchParams.get("empresaId") ?? "";
 
-  const [eventId, setEventId] = useState(defaultEventId);
-  const [events, setEvents] = useState<EventOption[]>([]);
+  const [empresaId, setEmpresaId] = useState(defaultEmpresaId);
+  const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
   const [tab, setTab] = useState<Tab>("contenido");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -77,14 +77,14 @@ function EmailBuilderForm() {
   const [useAlemanaFooter, setUseAlemanaFooter] = useState(true);
 
   useEffect(() => {
-    fetch("/api/eventos").then((r) => r.json()).then((d) => { if (Array.isArray(d)) setEvents(d); });
+    fetch("/api/empresas").then((r) => r.json()).then((d) => { if (Array.isArray(d)) setEmpresas(d); });
   }, []);
 
   useEffect(() => {
     if (!editId) return;
     fetch(`/api/campanas/${editId}`).then((r) => r.json()).then((c) => {
       if (!c?.id) return;
-      setEventId(c.eventId);
+      setEmpresaId(c.empresaId);
       setLogoUrl(c.logoUrl ?? "");
       setLogoAlt(c.logoAlt ?? "Grillo");
       setLogoHeight(c.logoHeight ?? "48px");
@@ -189,12 +189,12 @@ function EmailBuilderForm() {
 
   async function handleSave() {
     setError("");
-    if (!eventId) { setError("Debes seleccionar un evento"); return; }
+    if (!empresaId) { setError("Debes seleccionar una empresa"); return; }
     if (!emailTitle) { setError("El título del email es obligatorio"); return; }
     setSaving(true);
     const htmlBody = buildEmailHtml(builderFields);
     const payload = {
-      eventId, subject: emailTitle, htmlBody,
+      empresaId, subject: emailTitle, htmlBody,
       logoUrl, logoAlt, logoHeight, logoAlign, logoRightUrl, logoRightHeight, logoRight2Url, logoRight2Height, headerColor,
       emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
       iconDate, iconLinkText, iconLinkUrl,
@@ -246,18 +246,18 @@ function EmailBuilderForm() {
         {/* Sidebar */}
         <div className="w-80 border-r bg-white overflow-y-auto flex flex-col shrink-0">
 
-          {/* Evento + asunto */}
+          {/* Empresa + asunto */}
           <div className="p-4 border-b space-y-3">
             <div className="space-y-1">
-              <Label className="text-xs text-gray-500">Evento *</Label>
+              <Label className="text-xs text-gray-500">Empresa *</Label>
               <select
-                value={eventId}
-                onChange={(e) => setEventId(e.target.value)}
+                value={empresaId}
+                onChange={(e) => setEmpresaId(e.target.value)}
                 disabled={!!editId}
                 className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#207029] disabled:opacity-60"
               >
-                <option value="">Seleccionar evento...</option>
-                {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                <option value="">Seleccionar empresa...</option>
+                {empresas.map((em) => <option key={em.id} value={em.id}>{em.name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
@@ -397,9 +397,9 @@ function EmailBuilderForm() {
                 </div>
               </div>
 
-              {/* Datos del evento */}
+              {/* Fecha y lugar del envío */}
               <div className="space-y-2">
-                <Label className="text-xs text-gray-500 uppercase tracking-wide">Datos del evento</Label>
+                <Label className="text-xs text-gray-500 uppercase tracking-wide">Fecha y lugar del envío</Label>
                 <Input placeholder="Fecha (ej: 15 de junio, 9:00 hrs)" value={emailDate} onChange={(e) => setEmailDate(e.target.value)} className="text-sm" />
                 <Input placeholder="Lugar" value={emailLocation} onChange={(e) => setEmailLocation(e.target.value)} className="text-sm" />
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer pt-1">
@@ -411,7 +411,7 @@ function EmailBuilderForm() {
               {/* Iconos circulares (fecha + documento) */}
               <div className="space-y-2">
                 <Label className="text-xs text-gray-500 uppercase tracking-wide">Iconos (fecha + documento)</Label>
-                <p className="text-xs text-gray-400">Se muestran como círculos en el color de la clínica, sobre el cuerpo del email. Quedan vacíos en campañas que no los usen.</p>
+                <p className="text-xs text-gray-400">Se muestran como círculos en el color de la marca, sobre el cuerpo del email. Quedan vacíos en campañas que no los usen.</p>
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">📅 Fecha (texto)</label>
                   <Input placeholder="Ej: Jueves 10 de julio, 9:00 hrs" value={iconDate} onChange={(e) => setIconDate(e.target.value)} className="text-sm" />

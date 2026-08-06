@@ -4,26 +4,28 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import EventGroup from "./event-group";
+import EmpresaGroup from "./empresa-group";
+import { scopeWhere } from "@/lib/empresa";
 
 export default async function CampanasPage() {
   const campaigns = await prisma.campaign.findMany({
+    where: await scopeWhere(),
     orderBy: { createdAt: "desc" },
     include: {
-      event: { select: { id: true, title: true } },
+      empresa: { select: { id: true, name: true } },
       sendLogs: { select: { resendId: true, openedAt: true, clickedAt: true } },
     },
   });
 
-  // Group by event, preserving event order of first appearance
-  const eventMap = new Map<string, { title: string; campaigns: typeof campaigns }>();
+  // Group by empresa, preserving empresa order of first appearance
+  const empresaMap = new Map<string, { name: string; campaigns: typeof campaigns }>();
   for (const c of campaigns) {
-    const key = c.event.id;
-    if (!eventMap.has(key)) eventMap.set(key, { title: c.event.title, campaigns: [] });
-    eventMap.get(key)!.campaigns.push(c);
+    const key = c.empresa.id;
+    if (!empresaMap.has(key)) empresaMap.set(key, { name: c.empresa.name, campaigns: [] });
+    empresaMap.get(key)!.campaigns.push(c);
   }
 
-  const groups = Array.from(eventMap.values());
+  const groups = Array.from(empresaMap.values());
   const totalCampaigns = campaigns.length;
 
   return (
@@ -53,10 +55,10 @@ export default async function CampanasPage() {
       )}
 
       <div className="grid gap-4">
-        {groups.map(({ title, campaigns: group }) => (
-          <EventGroup
-            key={title}
-            eventTitle={title}
+        {groups.map(({ name, campaigns: group }) => (
+          <EmpresaGroup
+            key={name}
+            empresaName={name}
             campaigns={group.map((c) => {
               const sent = c.sendLogs.filter((l) => l.resendId).length;
               const opens = c.sendLogs.filter((l) => l.openedAt).length;

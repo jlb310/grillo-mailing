@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseContacts } from "@/lib/csv";
+import { canAccessEmpresa } from "@/lib/empresa";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -11,6 +12,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canAccessEmpresa(campaign.empresaId))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -21,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const result = await prisma.contact.createMany({
     data: contacts.map((c) => ({
-      eventId: campaign.eventId,
+      empresaId: campaign.empresaId,
       email: c.email,
       name: c.name,
     })),

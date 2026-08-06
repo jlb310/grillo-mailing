@@ -115,7 +115,7 @@ export async function runSend(campaignId: string) {
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
       include: {
-        event: { include: { contacts: { where: { unsubscribed: false, bounced: false } } } },
+        empresa: { include: { contacts: { where: { unsubscribed: false, bounced: false } } } },
         contactGroups: { include: { contacts: { where: { unsubscribed: false, bounced: false } } } },
       },
     });
@@ -132,7 +132,7 @@ export async function runSend(campaignId: string) {
 
     const allContacts = campaign.contactGroups.length > 0
       ? Array.from(new Map(campaign.contactGroups.flatMap(g => g.contacts).map(c => [c.id, c])).values())
-      : campaign.event.contacts;
+      : campaign.empresa.contacts;
 
     await prisma.sendLog.createMany({
       data: allContacts.map(c => ({ campaignId, contactId: c.id })),
