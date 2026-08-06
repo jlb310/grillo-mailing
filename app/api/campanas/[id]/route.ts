@@ -87,6 +87,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       footerText: body.footerText,
       blocks: body.blocks ?? undefined,
       ctaButtons: body.ctaButtons ?? undefined,
+      products: body.products ?? undefined,
+      socials: body.socials ?? undefined,
       programaUrl: body.programaUrl,
       iconDate: body.iconDate,
       iconLinkText: body.iconLinkText,

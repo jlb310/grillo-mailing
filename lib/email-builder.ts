@@ -7,6 +7,31 @@ export interface CtaButton {
   color: string;
 }
 
+export interface ProductItem {
+  id: string;
+  imageUrl: string;
+  title: string;
+  price: string;
+  buttonText: string;
+  buttonUrl: string;
+}
+
+export interface SocialItem {
+  id: string;
+  network: string;
+  url: string;
+}
+
+export const SOCIAL_NETWORKS: Record<string, { label: string }> = {
+  instagram: { label: "Instagram" },
+  facebook: { label: "Facebook" },
+  x: { label: "X" },
+  linkedin: { label: "LinkedIn" },
+  whatsapp: { label: "WhatsApp" },
+  youtube: { label: "YouTube" },
+  tiktok: { label: "TikTok" },
+};
+
 // Kept for backward compatibility
 export type BlockType = "text" | "image" | "button" | "divider" | "spacer";
 export interface EmailBlock {
@@ -42,6 +67,10 @@ export interface EmailBuilderFields {
   emailLocation?: string;
   emailBody?: string;
   ctaButtons?: CtaButton[];
+  /** Productos en grilla de 2 columnas: foto, título, precio, botón. */
+  products?: ProductItem[];
+  /** Redes sociales del footer (iconos redondos, centrados). Máx 4. */
+  socials?: SocialItem[];
   ctaText?: string;
   ctaUrl?: string;
   blocks?: EmailBlock[];
@@ -62,7 +91,6 @@ const DEFAULT_HEADER_COLOR = "#207029";
 const DEFAULT_FOOTER = "Grillo Mailing — correo.grillo.click";
 const DEFAULT_LOGO_TEXT = "Grillo";
 const DEFAULT_LOGO_URL = `${BASE_URL}/grillo-mark.png`;
-const DEFAULT_LOGO_RIGHT_URL = "";
 
 // ── Grillo corporate footer ─────────────────────────────────────────────────
 // Bloque verde oscuro (elementos blancos) sobre el footer estándar cuando
@@ -219,45 +247,100 @@ function normalizeBodyHtml(html: string): string {
     .replace(/<img /g,   '<img width="536" style="display:block;width:100%;max-width:536px;height:auto;" ');
 }
 
+function renderProductButton(text: string, url: string, color: string): string {
+  const href = escapeAttr(url);
+  return `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:10px auto 0;">
+  <tr>
+    <td align="center" bgcolor="${color}" style="border-radius:999px;">
+      <a href="${href}" target="_blank" style="display:inline-block;padding:9px 20px;background:${color};color:#ffffff;text-decoration:none;border-radius:999px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;"><span style="color:#ffffff;text-decoration:none;">${text}</span></a>
+    </td>
+  </tr>
+</table>`;
+}
+
+// Product card for the 2-column grid. When `lone` (odd last item) it spans the
+// full row width but keeps a compact card centered, so it doesn't stretch.
+function renderProductCard(p: ProductItem, color: string, lone = false): string {
+  const tdWidth = lone ? "100%" : "50%";
+  const innerStyle = lone
+    ? "border:1px solid #eeeeee;border-radius:12px;background-color:#ffffff;max-width:280px;"
+    : "border:1px solid #eeeeee;border-radius:12px;background-color:#ffffff;";
+  const img = p.imageUrl
+    ? `<tr><td align="center" style="padding:14px 14px 0;">
+         <img src="${escapeAttr(p.imageUrl)}" alt="${escapeAttr(p.title)}" width="236" style="display:block;width:100%;max-width:236px;height:auto;border-radius:8px;border:0;outline:none;text-decoration:none;" />
+       </td></tr>`
+    : "";
+  const title = p.title
+    ? `<tr><td align="center" style="padding:10px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#1f2937;line-height:1.35;">${escapeHtml(p.title)}</div></td></tr>`
+    : "";
+  const price = p.price
+    ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:${color};line-height:1.2;">${escapeHtml(p.price)}</div></td></tr>`
+    : "";
+  const button = p.buttonText && p.buttonUrl
+    ? `<tr><td align="center" style="padding:10px 14px 14px;">${renderProductButton(p.buttonText, p.buttonUrl, color)}</td></tr>`
+    : `<tr><td style="padding:14px;">&nbsp;</td></tr>`;
+  return `
+<td width="${tdWidth}" valign="top" align="${lone ? "center" : "left"}" style="padding:6px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="${innerStyle}">
+    ${img}${title}${price}${button}
+  </table>
+</td>`;
+}
+
+// 2-column product grid (foto, título, precio, botón). Pairs share a row; a
+// lone last item centers on its own row.
+function renderProducts(fields: EmailBuilderFields): string {
+  const products = (fields.products ?? []).filter((p) => p.imageUrl || p.title || p.price);
+  if (products.length === 0) return "";
+  const color = fields.headerColor ?? DEFAULT_HEADER_COLOR;
+  const rows: string[] = [];
+  for (let i = 0; i < products.length; i += 2) {
+    const a = products[i];
+    const b = products[i + 1];
+    rows.push(b
+      ? `<tr>${renderProductCard(a, color)}${renderProductCard(b, color)}</tr>`
+      : `<tr>${renderProductCard(a, color, true)}</tr>`);
+  }
+  return `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0 8px;">
+  ${rows.join("")}
+</table>`;
+}
+
+// Centered round social icons for the footer (up to 4). Icons are committed
+// self-contained PNGs (white glyph on a brand-color circle), so they render
+// identically in every client — no SVG, no border-radius hacks.
+function renderSocials(fields: EmailBuilderFields): string {
+  const socials = (fields.socials ?? [])
+    .filter((s) => s.url && SOCIAL_NETWORKS[s.network])
+    .slice(0, 4);
+  if (socials.length === 0) return "";
+  return `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 16px;">
+  <tr>
+    ${socials.map((s) => `
+    <td align="center" style="padding:0 6px;">
+      <a href="${safeHref(s.url)}" target="_blank" style="text-decoration:none;">
+        <img src="${EVENT_ICON_BASE}/social-${s.network}.png" width="44" height="44" alt="${escapeAttr(SOCIAL_NETWORKS[s.network].label)}" style="display:block;width:44px;height:44px;border:0;outline:none;text-decoration:none;" />
+      </a>
+    </td>`).join("")}
+  </tr>
+</table>`;
+}
+
 export function buildEmailHtml(fields: EmailBuilderFields): string {
   const headerColor     = fields.headerColor    ?? DEFAULT_HEADER_COLOR;
   const footerText      = fields.footerText     ?? DEFAULT_FOOTER;
   const logoUrl         = fields.logoUrl        || DEFAULT_LOGO_URL;
   const logoHeight      = parseInt(fields.logoHeight ?? "48");
-  const logoAlign       = fields.logoAlign      ?? "left";
-  const tdAlign         = logoAlign === "center" ? "center" : logoAlign === "right" ? "right" : "left";
-  const logoRightUrl    = fields.logoRightUrl   || DEFAULT_LOGO_RIGHT_URL;
-  const logoRightHeight = parseInt(fields.logoRightHeight ?? "48");
-  const logoRight2Url    = fields.logoRight2Url || "";
-  const logoRight2Height = parseInt(fields.logoRight2Height ?? "48");
-  const logoCenterUrl    = fields.logoCenterUrl || "";
-  const logoCenterHeight = parseInt(fields.logoCenterHeight ?? "48");
 
-  // ── Header — left logo + 1 or 2 logos on the right (opcionales) ──────────
-  const rightLogos = !logoRightUrl
-    ? ""
-    : logoRight2Url
-    ? `<img src="${logoRightUrl}" alt="" height="${logoRightHeight}" style="display:inline-block;height:${logoRightHeight}px;max-height:${logoRightHeight}px;border:0;outline:none;text-decoration:none;vertical-align:top;" /><span style="display:inline-block;width:12px;">&nbsp;</span><img src="${logoRight2Url}" alt="" height="${logoRight2Height}" style="display:inline-block;height:${logoRight2Height}px;max-height:${logoRight2Height}px;border:0;outline:none;text-decoration:none;vertical-align:top;" />`
-    : `<img src="${logoRightUrl}" alt="" height="${logoRightHeight}" style="display:inline-block;height:${logoRightHeight}px;max-height:${logoRightHeight}px;border:0;outline:none;text-decoration:none;vertical-align:top;" />`;
-
-  // Celda central opcional entre ambos logos; con widths fijos para que el
-  // logo del medio quede realmente centrado y no dependa del ancho de los otros.
-  const centerCell = logoCenterUrl
-    ? `
-    <td align="center" valign="top" width="34%">
-      <img src="${logoCenterUrl}" alt="" height="${logoCenterHeight}" style="display:inline-block;height:${logoCenterHeight}px;max-height:${logoCenterHeight}px;border:0;outline:none;text-decoration:none;vertical-align:top;" />
-    </td>`
-    : "";
-  const sideWidth = logoCenterUrl ? ` width="33%"` : "";
-
+  // ── Header — único logo, siempre centrado ────────────────────────────────
   const headerContent = `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
-    <td align="left" valign="top"${sideWidth}>
+    <td align="center" valign="top">
       <img src="${logoUrl}" alt="${fields.logoAlt ?? DEFAULT_LOGO_TEXT}" height="${logoHeight}" style="display:inline-block;height:${logoHeight}px;max-height:${logoHeight}px;border:0;outline:none;text-decoration:none;vertical-align:top;" />
-    </td>${centerCell}
-    <td align="right" valign="top"${sideWidth}>
-      ${rightLogos}
     </td>
   </tr>
 </table>`;
@@ -306,6 +389,9 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
   // Circular calendar + document icon badges — rendered after the graphic/body
   // and before the CTA button: gráfica → iconos con información → inscripción.
   bodyHtml += renderInfoIcons(fields);
+
+  // Productos en grilla de 2 columnas (foto, título, precio, botón).
+  bodyHtml += renderProducts(fields);
 
   // CTA buttons
   const buttons: { text: string; url: string; color: string }[] = [];
@@ -376,6 +462,7 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
         <tr>
           <td align="center" bgcolor="#f9f9f9" style="padding-top:20px;padding-bottom:16px;padding-left:32px;padding-right:32px;background-color:#f9f9f9;border-top:1px solid #eeeeee;">
             <img src="${logoUrl}" alt="${fields.logoAlt ?? DEFAULT_LOGO_TEXT}" height="28" width="auto" style="display:block;margin:0 auto 10px;height:28px;border:0;outline:none;text-decoration:none;" />
+            ${renderSocials(fields)}
             <p style="font-family:Arial,sans-serif;font-size:12px;color:#999999;line-height:1.5;margin:0 0 10px;">${footerText}</p>
             <p style="font-family:Arial,sans-serif;font-size:10px;color:#cccccc;margin:0 0 8px;">Enviado con <a href="https://grillo.click" target="_blank" style="color:#cccccc;text-decoration:underline;font-family:Arial,sans-serif;font-size:10px;">Grillo Mailing</a>.</p>
             <p style="font-family:Arial,sans-serif;font-size:11px;color:#bbbbbb;line-height:1.6;margin:0;">

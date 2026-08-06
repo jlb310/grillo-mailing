@@ -63,6 +63,11 @@ model Campaign {
   footerText    String?        @db.Text
   blocks        Json?
   ctaButtons    Json?
+  // Productos para la grilla de 2 columnas en el cuerpo del email:
+  // [{ id, imageUrl, title, price, buttonText, buttonUrl }]
+  products      Json?
+  // Redes sociales del footer, hasta 4: [{ id, network, url }]
+  socials       Json?
   programaUrl   String?
   iconDate      String?
   iconLinkText  String?

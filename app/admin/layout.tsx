@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { AdminNav } from "@/components/admin-nav";
+import { AdminShell } from "@/components/admin-shell";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -17,13 +17,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <AdminNav
-        role={session.user.role ?? "ADMIN"}
-        empresaName={empresaName}
-        userName={session.user.name ?? session.user.email ?? ""}
-      />
-      <main className="flex-1 overflow-auto">{children}</main>
-    </div>
+    <AdminShell
+      role={session.user.role ?? "ADMIN"}
+      empresaName={empresaName}
+      userName={session.user.name ?? session.user.email ?? ""}
+    >
+      {children}
+    </AdminShell>
   );
 }

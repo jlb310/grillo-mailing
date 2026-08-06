@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { buildEmailHtml, EmailBuilderFields } from "@/lib/email-builder";
-import { ArrowLeft, Save, Eye, EyeOff, Plus, Trash2, Upload, Palette, Layout, AlignCenter } from "lucide-react";
+import { buildEmailHtml, EmailBuilderFields, ProductItem, SocialItem, SOCIAL_NETWORKS } from "@/lib/email-builder";
+import { ArrowLeft, Save, Eye, EyeOff, Plus, Trash2, Upload, Palette, Layout, AlignCenter, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import RichTextEditor from "@/components/rich-text-editor";
 
@@ -38,19 +38,10 @@ function EmailBuilderForm() {
 
   // Design
   const logoFileRef = useRef<HTMLInputElement>(null);
-  const logoRightFileRef = useRef<HTMLInputElement>(null);
-  const logoRight2FileRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingLogoRight, setUploadingLogoRight] = useState(false);
-  const [uploadingLogoRight2, setUploadingLogoRight2] = useState(false);
   const [logoUrl, setLogoUrl] = useState("/grillo-mark.png");
   const [logoAlt, setLogoAlt] = useState("Grillo");
   const [logoHeight, setLogoHeight] = useState("48px");
-  const [logoAlign, setLogoAlign] = useState<"left" | "center" | "right">("left");
-  const [logoRightUrl, setLogoRightUrl] = useState("");
-  const [logoRightHeight, setLogoRightHeight] = useState("48px");
-  const [logoRight2Url, setLogoRight2Url] = useState("");
-  const [logoRight2Height, setLogoRight2Height] = useState("48px");
   const [headerColor, setHeaderColor] = useState("#207029");
   const [emailDate, setEmailDate] = useState("");
   const [emailLocation, setEmailLocation] = useState("");
@@ -71,10 +62,13 @@ function EmailBuilderForm() {
   const [emailSubtitle, setEmailSubtitle] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [ctaButtons, setCtaButtons] = useState<CtaButton[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [uploadingProductId, setUploadingProductId] = useState<string | null>(null);
 
   // Footer
   const [footerText, setFooterText] = useState("Grillo Mailing — correo.grillo.click");
   const [useAlemanaFooter, setUseAlemanaFooter] = useState(true);
+  const [socials, setSocials] = useState<SocialItem[]>([]);
 
   useEffect(() => {
     fetch("/api/empresas").then((r) => r.json()).then((d) => { if (Array.isArray(d)) setEmpresas(d); });
@@ -88,11 +82,6 @@ function EmailBuilderForm() {
       setLogoUrl(c.logoUrl ?? "");
       setLogoAlt(c.logoAlt ?? "Grillo");
       setLogoHeight(c.logoHeight ?? "48px");
-      setLogoAlign((c.logoAlign as "left" | "center" | "right") ?? "left");
-      setLogoRightUrl(c.logoRightUrl ?? "");
-      setLogoRightHeight(c.logoRightHeight ?? "48px");
-      setLogoRight2Url(c.logoRight2Url ?? "");
-      setLogoRight2Height(c.logoRight2Height ?? "48px");
       setHeaderColor(c.headerColor ?? "#207029");
       setEmailDate(c.emailDate ?? "");
       setEmailLocation(c.emailLocation ?? "");
@@ -105,6 +94,8 @@ function EmailBuilderForm() {
       setEmailTitle(c.emailTitle ?? "");
       setEmailSubtitle(c.emailSubtitle ?? "");
       setFooterText(c.footerText ?? "Grillo Mailing — correo.grillo.click");
+      if (c.products && Array.isArray(c.products)) setProducts(c.products as ProductItem[]);
+      if (c.socials && Array.isArray(c.socials)) setSocials(c.socials as SocialItem[]);
       // Load body and CTA buttons
       if (c.ctaButtons && Array.isArray(c.ctaButtons)) {
         setCtaButtons(c.ctaButtons as CtaButton[]);
@@ -116,11 +107,11 @@ function EmailBuilderForm() {
   }, [editId]);
 
   const builderFields: EmailBuilderFields = useMemo(() => ({
-    logoUrl, logoAlt, logoHeight, logoAlign, logoRightUrl, logoRightHeight, logoRight2Url, logoRight2Height, headerColor,
+    logoUrl, logoAlt, logoHeight, logoAlign: "center", headerColor,
     emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
     iconDate, iconLinkText, iconLinkUrl,
-    emailBody, ctaButtons, footerText, useAlemanaFooter,
-  }), [logoUrl, logoAlt, logoHeight, logoAlign, logoRightUrl, logoRightHeight, logoRight2Url, logoRight2Height, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, footerText, useAlemanaFooter]);
+    emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials,
+  }), [logoUrl, logoAlt, logoHeight, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials]);
 
   const previewHtml = useMemo(() => buildEmailHtml(builderFields), [builderFields]);
 
@@ -140,36 +131,49 @@ function EmailBuilderForm() {
     setUploadingLogo(false);
   }
 
-  async function uploadLogoRight(file: File) {
-    setUploadingLogoRight(true);
+  async function uploadProductImage(file: File, productId: string) {
+    setUploadingProductId(productId);
     setError("");
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("folder", "logos");
+    fd.append("folder", "productos");
     const res = await fetch("/api/upload", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (data.url) {
-      setLogoRightUrl(data.url);
+      updateProduct(productId, "imageUrl", data.url);
     } else {
-      setError(data.error ?? "No se pudo subir el logo. Inténtalo de nuevo.");
+      setError(data.error ?? "No se pudo subir la foto. Inténtalo de nuevo.");
     }
-    setUploadingLogoRight(false);
+    setUploadingProductId(null);
   }
 
-  async function uploadLogoRight2(file: File) {
-    setUploadingLogoRight2(true);
-    setError("");
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("folder", "logos");
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json().catch(() => ({}));
-    if (data.url) {
-      setLogoRight2Url(data.url);
-    } else {
-      setError(data.error ?? "No se pudo subir el logo. Inténtalo de nuevo.");
-    }
-    setUploadingLogoRight2(false);
+  function addProduct() {
+    setProducts((prev) => [...prev, { id: uid(), imageUrl: "", title: "", price: "", buttonText: "Comprar", buttonUrl: "https://" }]);
+  }
+
+  function updateProduct(id: string, field: keyof ProductItem, value: string) {
+    setProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p));
+  }
+
+  function removeProduct(id: string) {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function addSocial() {
+    setSocials((prev) => {
+      if (prev.length >= 4) return prev;
+      const used = prev.map((s) => s.network);
+      const next = Object.keys(SOCIAL_NETWORKS).find((k) => !used.includes(k)) ?? "instagram";
+      return [...prev, { id: uid(), network: next, url: "https://" }];
+    });
+  }
+
+  function updateSocial(id: string, field: keyof SocialItem, value: string) {
+    setSocials((prev) => prev.map((s) => s.id === id ? { ...s, [field]: value } : s));
+  }
+
+  function removeSocial(id: string) {
+    setSocials((prev) => prev.filter((s) => s.id !== id));
   }
 
   async function uploadPrograma(file: File) {
@@ -213,10 +217,10 @@ function EmailBuilderForm() {
     const htmlBody = buildEmailHtml(builderFields);
     const payload = {
       empresaId, subject: emailTitle, htmlBody,
-      logoUrl, logoAlt, logoHeight, logoAlign, logoRightUrl, logoRightHeight, logoRight2Url, logoRight2Height, headerColor,
+      logoUrl, logoAlt, logoHeight, logoAlign: "center", logoRightUrl: "", logoRightHeight: "", logoRight2Url: "", logoRight2Height: "", headerColor,
       emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
       iconDate, iconLinkText, iconLinkUrl,
-      emailBody, ctaButtons, footerText, useAlemanaFooter, programaUrl,
+      emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials, programaUrl,
     };
     try {
       const url = editId ? `/api/campanas/${editId}` : "/api/campanas";
@@ -319,14 +323,7 @@ function EmailBuilderForm() {
                   </div>
                 </div>
                 <Input placeholder="Texto alternativo del logo" value={logoAlt} onChange={(e) => setLogoAlt(e.target.value)} className="text-sm" />
-                <div className="flex gap-1">
-                  {(["left", "center", "right"] as const).map((a) => (
-                    <button key={a} onClick={() => setLogoAlign(a)}
-                      className={`flex-1 py-1.5 text-xs rounded border transition-colors ${logoAlign === a ? "bg-[#207029] text-white border-[#207029]" : "border-gray-200 text-gray-500 hover:border-[#207029]"}`}>
-                      {a === "left" ? "↤ Izq" : a === "center" ? "↔ Centro" : "Der ↦"}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-xs text-gray-400">El logo del header se muestra centrado.</p>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-gray-400">Altura del logo</label>
@@ -336,68 +333,6 @@ function EmailBuilderForm() {
                     onChange={(e) => setLogoHeight(`${e.target.value}px`)} className="w-full accent-[#207029]" />
                   <div className="flex justify-between text-xs text-gray-300"><span>24px</span><span>120px</span></div>
                 </div>
-              </div>
-
-              {/* Logo derecho */}
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-500 uppercase tracking-wide">Logo derecho 1 (header)</Label>
-                <input ref={logoRightFileRef} type="file" accept="image/*" className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogoRight(f); e.target.value = ""; }} />
-                <div className="relative group rounded-lg overflow-hidden border">
-                  <img src={logoRightUrl} alt="Logo derecho" className="w-full h-20 object-contain bg-gray-100 p-2" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                    <button onClick={() => logoRightFileRef.current?.click()} disabled={uploadingLogoRight}
-                      className="text-white text-xs bg-white/20 px-3 py-1.5 rounded flex items-center gap-1.5">
-                      <Upload className="w-3 h-3" /> {uploadingLogoRight ? "Subiendo..." : "Cambiar logo"}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-gray-400">Altura</label>
-                    <span className="text-xs font-mono text-[#207029]">{logoRightHeight}</span>
-                  </div>
-                  <input type="range" min={24} max={120} step={4} value={parseInt(logoRightHeight)}
-                    onChange={(e) => setLogoRightHeight(`${e.target.value}px`)} className="w-full accent-[#207029]" />
-                  <div className="flex justify-between text-xs text-gray-300"><span>24px</span><span>120px</span></div>
-                </div>
-              </div>
-
-              {/* Logo derecho 2 (opcional) */}
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-500 uppercase tracking-wide">Logo derecho 2 (opcional)</Label>
-                <input ref={logoRight2FileRef} type="file" accept="image/*" className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogoRight2(f); e.target.value = ""; }} />
-                {logoRight2Url ? (
-                  <>
-                    <div className="relative group rounded-lg overflow-hidden border">
-                      <img src={logoRight2Url} alt="Logo derecho 2" className="w-full h-20 object-contain bg-gray-100 p-2" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
-                        <button onClick={() => logoRight2FileRef.current?.click()} disabled={uploadingLogoRight2}
-                          className="text-white text-xs bg-white/20 px-3 py-1.5 rounded flex items-center gap-1.5">
-                          <Upload className="w-3 h-3" /> {uploadingLogoRight2 ? "Subiendo..." : "Cambiar"}
-                        </button>
-                        <button onClick={() => setLogoRight2Url("")}
-                          className="text-white text-xs bg-red-500/70 px-3 py-1.5 rounded">Quitar</button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-gray-400">Altura</label>
-                        <span className="text-xs font-mono text-[#207029]">{logoRight2Height}</span>
-                      </div>
-                      <input type="range" min={24} max={120} step={4} value={parseInt(logoRight2Height)}
-                        onChange={(e) => setLogoRight2Height(`${e.target.value}px`)} className="w-full accent-[#207029]" />
-                      <div className="flex justify-between text-xs text-gray-300"><span>24px</span><span>120px</span></div>
-                    </div>
-                  </>
-                ) : (
-                  <button onClick={() => logoRight2FileRef.current?.click()} disabled={uploadingLogoRight2}
-                    className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-sm text-gray-400 hover:border-[#207029] hover:text-[#207029] flex flex-col items-center gap-1.5 transition">
-                    <Upload className="w-5 h-5" />
-                    {uploadingLogoRight2 ? "Subiendo..." : "Subir segundo logo derecho"}
-                  </button>
-                )}
               </div>
 
               {/* Color de marca / botones (el header siempre es blanco) */}
@@ -485,6 +420,64 @@ function EmailBuilderForm() {
                 />
               </div>
 
+              {/* Productos (grilla 2 columnas) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-gray-500 uppercase tracking-wide">Productos (2 columnas)</Label>
+                  <button onClick={addProduct} className="flex items-center gap-1 text-xs text-[#207029] hover:underline">
+                    <Plus className="w-3 h-3" /> Agregar producto
+                  </button>
+                </div>
+
+                {products.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-3 border border-dashed border-gray-200 rounded-lg">
+                    Sin productos. Agregá uno para mostrarlos en 2 columnas (foto, título, precio y botón).
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {products.map((p) => (
+                    <div key={p.id} className="border border-gray-100 rounded-lg p-2.5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-gray-400 uppercase">Producto</span>
+                        <button onClick={() => removeProduct(p.id)} className="text-gray-300 hover:text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        id={`prod-file-${p.id}`}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadProductImage(f, p.id); e.target.value = ""; }}
+                      />
+                      {p.imageUrl ? (
+                        <div className="relative group rounded-lg overflow-hidden border">
+                          <img src={p.imageUrl} alt={p.title} className="w-full h-24 object-contain bg-gray-100 p-1.5" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
+                            <label htmlFor={`prod-file-${p.id}`} className="text-white text-[10px] bg-white/20 px-2 py-1 rounded flex items-center gap-1 cursor-pointer">
+                              <Upload className="w-3 h-3" /> {uploadingProductId === p.id ? "Subiendo..." : "Cambiar"}
+                            </label>
+                            <button onClick={() => updateProduct(p.id, "imageUrl", "")} className="text-white text-[10px] bg-red-500/70 px-2 py-1 rounded">Quitar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label htmlFor={`prod-file-${p.id}`} className="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-xs text-gray-400 hover:border-[#207029] hover:text-[#207029] flex flex-col items-center gap-1 cursor-pointer transition">
+                          <ImageIcon className="w-4 h-4" />
+                          {uploadingProductId === p.id ? "Subiendo..." : "Foto del producto"}
+                        </label>
+                      )}
+                      <Input placeholder="Título" value={p.title} onChange={(e) => updateProduct(p.id, "title", e.target.value)} className="text-sm" />
+                      <Input placeholder="Precio (ej: $19.990)" value={p.price} onChange={(e) => updateProduct(p.id, "price", e.target.value)} className="text-sm" />
+                      <div className="space-y-1">
+                        <Input placeholder="Texto del botón" value={p.buttonText} onChange={(e) => updateProduct(p.id, "buttonText", e.target.value)} className="text-sm" />
+                        <Input placeholder="URL del botón (https://...)" value={p.buttonUrl} onChange={(e) => updateProduct(p.id, "buttonUrl", e.target.value)} className="text-sm" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Botones CTA */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -544,6 +537,55 @@ function EmailBuilderForm() {
                 />
                 <p className="text-xs text-gray-400">Dirección, teléfono, redes sociales, etc.</p>
               </div>
+
+              {/* Redes sociales (iconos redondos, centrados, máx 4) */}
+              <div className="space-y-2 mt-6 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-gray-500 uppercase tracking-wide">Redes sociales (hasta 4)</Label>
+                  <button onClick={addSocial} disabled={socials.length >= 4}
+                    className="flex items-center gap-1 text-xs text-[#207029] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
+                    <Plus className="w-3 h-3" /> Agregar red
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400">Se muestran como iconos redondos, centrados sobre el texto del footer.</p>
+
+                {socials.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-3 border border-dashed border-gray-200 rounded-lg">
+                    Sin redes sociales. Agregá hasta 4.
+                  </p>
+                )}
+
+                {socials.map((s) => (
+                  <div key={s.id} className="border border-gray-100 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <img
+                        src={`/icons/social-${s.network}.png`}
+                        alt={SOCIAL_NETWORKS[s.network]?.label ?? s.network}
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <button onClick={() => removeSocial(s.id)} className="text-gray-300 hover:text-red-500">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <select
+                      value={s.network}
+                      onChange={(e) => updateSocial(s.id, "network", e.target.value)}
+                      className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#207029]"
+                    >
+                      {Object.entries(SOCIAL_NETWORKS).map(([key, v]) => (
+                        <option key={key} value={key}>{v.label}</option>
+                      ))}
+                    </select>
+                    <Input
+                      placeholder="URL (https://...)"
+                      value={s.url}
+                      onChange={(e) => updateSocial(s.id, "url", e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+
               <div className="space-y-2 mt-6 pt-4 border-t border-gray-100">
                 <Label className="text-xs text-gray-500 uppercase tracking-wide">Footer corporativo</Label>
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
