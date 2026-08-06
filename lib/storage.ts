@@ -3,11 +3,11 @@ import path from "path";
 import fs from "fs/promises";
 import { BASE_URL } from "@/lib/base-url";
 
-// Local upload storage served publicly from /public. The compose mounts
-// persistent volumes on the subfolders (logos, programas, uploads) so files
-// survive redeploys — same approach as certificates (CERTIFICATES_PATH).
+// Local upload storage. Files live under the uploads root (mounted on persistent
+// volumes in prod) and are served by the /api/media/[...key] route handler —
+// this Next version does NOT serve files added to /public at runtime.
 const UPLOADS_DIR = process.env.UPLOADS_PATH ?? path.join(process.cwd(), "public");
-const PUBLIC_BASE = process.env.PUBLIC_BASE_URL ?? BASE_URL;
+export const uploadsDir = UPLOADS_DIR;
 
 export async function saveUpload(
   buffer: Buffer,
@@ -23,5 +23,5 @@ export async function saveUpload(
   const filename = `${randomUUID()}${ext}`;
   await fs.writeFile(path.join(dir, filename), buffer);
 
-  return `${PUBLIC_BASE}/${safeFolder}/${filename}`;
+  return `${BASE_URL}/api/media/${safeFolder}/${filename}`;
 }
