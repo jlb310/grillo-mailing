@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Send, Clock, CheckCircle, XCircle, Loader2, Mail, MousePointer, Eye, TrendingUp, Pencil, Trash2, Copy, Save, X } from "lucide-react"
+import { ArrowLeft, Send, Clock, CheckCircle, XCircle, Loader2, Mail, MousePointer, Eye, TrendingUp, Pencil, Trash2, Copy, Save, X, LayoutTemplate } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { EmailBuilder, type EmailBlock } from "@/components/email-builder"
 import Link from "next/link"
 
 interface Campaign {
@@ -17,6 +18,7 @@ interface Campaign {
   subject: string
   status: string
   htmlContent: string
+  blocks: EmailBlock[] | null
   fromName: string
   fromEmail: string
   replyTo: string | null
@@ -42,6 +44,9 @@ export default function CampaignDetailPage() {
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({ name: "", subject: "", fromName: "", fromEmail: "", replyTo: "" })
   const [actionLoading, setActionLoading] = useState(false)
+  const [editingContent, setEditingContent] = useState(false)
+  const [contentDraft, setContentDraft] = useState<{ blocks: EmailBlock[]; htmlContent: string; textContent: string } | null>(null)
+  const [savingContent, setSavingContent] = useState(false)
 
   useEffect(() => {
     const pathParts = window.location.pathname.split("/")
@@ -83,6 +88,25 @@ export default function CampaignDetailPage() {
       fetchCampaign(id)
     } else {
       alert(data.error || "No se pudo actualizar la campaña")
+    }
+  }
+
+  const handleSaveContent = async () => {
+    if (!id || !contentDraft) return
+    setSavingContent(true)
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contentDraft),
+    })
+    const data = await res.json()
+    setSavingContent(false)
+    if (res.ok) {
+      setEditingContent(false)
+      setContentDraft(null)
+      fetchCampaign(id)
+    } else {
+      alert(data.error || "No se pudo guardar el diseño")
     }
   }
 
@@ -131,8 +155,8 @@ export default function CampaignDetailPage() {
     const payload = {
       name: campaign.name,
       subject: campaign.subject,
-      htmlContent: campaign.htmlContent,
-      textContent: "",
+      htmlContent: contentDraft?.htmlContent || campaign.htmlContent,
+      textContent: contentDraft?.textContent || "",
       fromName: campaign.fromName,
       fromEmail: campaign.fromEmail,
       replyTo: campaign.replyTo || "",
@@ -212,6 +236,10 @@ export default function CampaignDetailPage() {
           <Button variant="outline" onClick={() => setEditing(!editing)} disabled={actionLoading || campaign.status === "SENT" || campaign.status === "SENDING"} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
             {editing ? <X className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
             {editing ? "Cancelar" : "Editar"}
+          </Button>
+          <Button variant="outline" onClick={() => { setEditingContent(!editingContent); setContentDraft(null) }} disabled={actionLoading || campaign.status === "SENT" || campaign.status === "SENDING"} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
+            {editingContent ? <X className="w-4 h-4 mr-2" /> : <LayoutTemplate className="w-4 h-4 mr-2" />}
+            {editingContent ? "Cerrar editor" : "Editar diseño"}
           </Button>
           <Button variant="outline" onClick={handleDuplicate} disabled={actionLoading} className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted">
             <Copy className="w-4 h-4 mr-2" /> Duplicar
@@ -294,6 +322,31 @@ export default function CampaignDetailPage() {
         </Card>
       )}
 
+      {editingContent && (
+        <Card className="border border-border bg-background-elev rounded-2xl shadow-none overflow-hidden">
+          <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-semibold tracking-tight text-foreground">Editar diseño</CardTitle>
+              <p className="text-sm text-foreground-subtle mt-1">
+                {campaign.blocks?.length
+                  ? "Modifica los bloques y guarda para actualizar el contenido del email."
+                  : "Esta campaña se creó antes del editor visual, así que no tiene bloques guardados. Al armar el diseño y guardarlo reemplazarás el HTML actual."}
+              </p>
+            </div>
+            <Button onClick={handleSaveContent} disabled={savingContent || !contentDraft} className="h-10 shrink-0 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl gap-2">
+              <Save className="w-4 h-4" />
+              {savingContent ? "Guardando..." : "Guardar diseño"}
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0 min-h-[400px]">
+            <EmailBuilder
+              initialBlocks={campaign.blocks ?? []}
+              onChange={(blocks, htmlContent, textContent) => setContentDraft({ blocks, htmlContent, textContent })}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
@@ -353,7 +406,7 @@ export default function CampaignDetailPage() {
           <CardContent className="p-0">
             <div className="border border-border rounded-xl overflow-hidden m-4">
               <iframe
-                srcDoc={campaign.htmlContent}
+                srcDoc={contentDraft?.htmlContent || campaign.htmlContent}
                 className="w-full h-[500px] border-0"
                 title="Campaign Preview"
               />

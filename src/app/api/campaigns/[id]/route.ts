@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions, canAccessOrganization } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 
 export async function GET(
   req: NextRequest,
@@ -48,16 +49,20 @@ export async function PATCH(
   }
 
   const body = await req.json()
-  const updated = await prisma.campaign.update({
-    where: { id },
-    data: {
-      name: body.name,
-      subject: body.subject,
-      fromName: body.fromName,
-      fromEmail: body.fromEmail,
-      replyTo: body.replyTo || null,
-    },
-  })
+
+  // Solo se tocan los campos presentes en el body: el detalle envía por separado
+  // los datos principales y el contenido del editor visual.
+  const data: Prisma.CampaignUpdateInput = {}
+  if (body.name !== undefined) data.name = body.name
+  if (body.subject !== undefined) data.subject = body.subject
+  if (body.fromName !== undefined) data.fromName = body.fromName
+  if (body.fromEmail !== undefined) data.fromEmail = body.fromEmail
+  if (body.replyTo !== undefined) data.replyTo = body.replyTo || null
+  if (body.htmlContent !== undefined) data.htmlContent = body.htmlContent
+  if (body.textContent !== undefined) data.textContent = body.textContent
+  if (Array.isArray(body.blocks)) data.blocks = body.blocks
+
+  const updated = await prisma.campaign.update({ where: { id }, data })
 
   return NextResponse.json(updated)
 }
@@ -82,6 +87,7 @@ export async function POST(
       subject: campaign.subject,
       htmlContent: campaign.htmlContent,
       textContent: campaign.textContent,
+      blocks: campaign.blocks ?? Prisma.DbNull,
       fromName: campaign.fromName,
       fromEmail: campaign.fromEmail,
       replyTo: campaign.replyTo,

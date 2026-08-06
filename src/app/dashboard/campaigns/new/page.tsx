@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Send, Save, Clock, Mail } from "lucide-react"
+import { toast } from "sonner"
 import Link from "next/link"
 
 interface Domain {
@@ -44,6 +45,7 @@ export default function NewCampaignPage() {
   const [testEmail, setTestEmail] = useState("")
   const [testResult, setTestResult] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
+  const [blocks, setBlocks] = useState<EmailBlock[]>([])
   const [formData, setFormData] = useState({
     name: "",
     subject: "",
@@ -78,7 +80,8 @@ export default function NewCampaignPage() {
     Promise.all([fetchDomains(), fetchLists()]).then(() => setLoading(false))
   }, [fetchDomains, fetchLists])
 
-  const handleBuilderChange = (_blocks: EmailBlock[], html: string, text: string) => {
+  const handleBuilderChange = (nextBlocks: EmailBlock[], html: string, text: string) => {
+    setBlocks(nextBlocks)
     setFormData((current) => ({ ...current, htmlContent: html, textContent: text }))
   }
 
@@ -90,6 +93,7 @@ export default function NewCampaignPage() {
     const activeOrg = isSuperAdmin ? localStorage.getItem("grillo-active-org") : null
     const payload = {
       ...formData,
+      blocks,
       status: action === "schedule" ? "SCHEDULED" : "DRAFT",
       scheduledAt: action === "schedule" && formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
       ...(activeOrg ? { organizationId: activeOrg } : {}),
@@ -104,11 +108,7 @@ export default function NewCampaignPage() {
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}))
       const message = errorData.error || errorData.message || `Error ${res.status}: ${res.statusText}`
-      toast({
-        title: "Error al guardar",
-        description: message,
-        variant: "destructive",
-      })
+      toast.error("Error al guardar", { description: message })
       setSaving(false)
       setSending(false)
       setScheduling(false)

@@ -209,6 +209,7 @@ model Campaign {
   subject        String
   htmlContent    String
   textContent    String?
+  blocks         Json?
   status         CampaignStatus @default(DRAFT)
   scheduledAt    DateTime?
   sentAt         DateTime?
