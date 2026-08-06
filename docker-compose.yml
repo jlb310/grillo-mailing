@@ -1,42 +1,38 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    expose:
-      - "3000"
+    build: .
+    ports:
+      - "3000:3000"
     environment:
-      - NODE_ENV=production
-      # Postgres corre como servicio aparte en Dokploy (grillo-mailing-db), no
-      # como parte de este compose. Se alcanza por hostname en dokploy-network.
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - RESEND_WEBHOOK_SECRET=${RESEND_WEBHOOK_SECRET}
-      # Cifra las credenciales de Resend que cada cliente pega en la app.
-      # Si se pierde o se cambia, hay que volver a pegarlas todas.
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      # Password del admin en el seed inicial. Si no se define, el seed genera
-      # una clave aleatoria y la imprime en los logs del contenedor.
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    networks:
-      - dokploy-network
+      DATABASE_URL: ${DATABASE_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      SVIX_SECRET: ${SVIX_SECRET}
+      CERTIFICATES_PATH: /app/public/certificates
+    volumes:
+      - certificates:/app/public/certificates
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
-  # Optional: Cron service for scheduled campaigns
-  # Uncomment if you want automatic scheduling inside Docker
-  # cron:
-  #   image: alpine/curl
-  #   command: >
-  #     sh -c "echo '* * * * * curl -s -f $$NEXTAUTH_URL/api/campaigns/scheduled/send > /dev/null 2>&1' | crontab - && crond -f"
-  #   environment:
-  #     - NEXTAUTH_URL=${NEXTAUTH_URL}
-  #   depends_on:
-  #     - app
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: digitals
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: digitals_mailer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U digitals -d digitals_mailer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
-networks:
-  # Red que Dokploy usa para Traefik y para los servicios de base de datos.
-  # Es externa: la crea Dokploy, no este compose.
-  dokploy-network:
-    external: true
+volumes:
+  pgdata:
+  certificates:

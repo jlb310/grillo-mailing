@@ -1,0 +1,117 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Grillo — paleta oficial de grillo.click (tema light) */
+:root {
+  --background: #fafbf5;
+  --foreground: #020802;
+  --card: #ffffff;
+  --card-foreground: #020802;
+  --popover: #ffffff;
+  --popover-foreground: #020802;
+  --primary: #207029;
+  --primary-foreground: #fafbf5;
+  --secondary: #f2f3ea;
+  --secondary-foreground: #207029;
+  --muted: #f2f3ea;
+  --muted-foreground: #51584e;
+  --accent: #daefd6;
+  --accent-foreground: #004a03;
+  --destructive: #d33a3c;
+  --border: #dddfd7;
+  --input: #dddfd7;
+  --ring: #207029;
+  --radius: 0.75rem;
+  /* Sidebar estilo grillo.click dark: verde casi negro */
+  --sidebar: #070d08;
+  --sidebar-foreground: #bac0b6;
+  --sidebar-primary: #69bc57;
+  --sidebar-primary-foreground: #070d08;
+  --sidebar-accent: #141d16;
+  --sidebar-accent-foreground: #f8f9f5;
+  --sidebar-border: #1d271f;
+  --sidebar-ring: #69bc57;
+}
+
+/* Tema dark de grillo.click, por si se habilita con .dark */
+.dark {
+  --background: #070d08;
+  --foreground: #f8f9f5;
+  --card: #0e1610;
+  --card-foreground: #f8f9f5;
+  --popover: #0e1610;
+  --popover-foreground: #f8f9f5;
+  --primary: #69bc57;
+  --primary-foreground: #070d08;
+  --secondary: #141d16;
+  --secondary-foreground: #89dd76;
+  --muted: #141d16;
+  --muted-foreground: #8a9288;
+  --accent: #0d3811;
+  --accent-foreground: #89dd76;
+  --destructive: #f75d59;
+  --border: #1d271f;
+  --input: #1d271f;
+  --ring: #69bc57;
+  --sidebar: #040704;
+  --sidebar-foreground: #bac0b6;
+  --sidebar-primary: #69bc57;
+  --sidebar-primary-foreground: #070d08;
+  --sidebar-accent: #141d16;
+  --sidebar-accent-foreground: #f8f9f5;
+  --sidebar-border: #1d271f;
+  --sidebar-ring: #69bc57;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans antialiased;
+  }
+}
