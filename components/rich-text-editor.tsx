@@ -8,13 +8,88 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
+import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
+import { Fragment } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import { useEffect, useCallback, useRef, useState } from "react";
 import {
   Bold, Italic, UnderlineIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Link as LinkIcon, Unlink,
-  Heading2, Heading3, Pilcrow, ImageIcon, Loader2,
+  Heading2, Heading3, Pilcrow, ImageIcon, Loader2, ChevronUp, ChevronDown,
 } from "lucide-react";
+
+// NodeView for the image: lets you move the image up/​down within the body.
+function MailingImageView({ node, editor, getPos }: any) {
+  function move(dir: "up" | "down") {
+    if (!editor || !getPos) return;
+    const { state } = editor;
+    const startPos = typeof getPos === "function" ? getPos() : (getPos as number);
+    const $p = state.doc.resolve(startPos);
+    // Solo reordenamos imágenes que son bloques raíz del cuerpo.
+    const parent = $p.parent;
+    if (parent !== state.doc) return;
+
+    let idx = -1;
+    let offset = 0;
+    for (let i = 0; i < parent.childCount; i++) {
+      if (offset === startPos) { idx = i; break; }
+      offset += parent.child(i).nodeSize;
+    }
+    if (idx < 0) return;
+
+    const targetIdx = idx + (dir === "up" ? -1 : 1);
+    if (targetIdx < 0 || targetIdx >= parent.childCount) return;
+
+    const children: any[] = [];
+    parent.forEach((c) => children.push(c));
+    [children[idx], children[targetIdx]] = [children[targetIdx], children[idx]];
+
+    const tr = state.tr.replaceWith(0, state.doc.content.size, Fragment.fromArray(children));
+
+    let newPos = 0;
+    for (let i = 0; i < targetIdx; i++) newPos += children[i].nodeSize;
+    tr.setSelection(NodeSelection.create(tr.doc, newPos));
+    editor.view.dispatch(tr);
+  }
+
+  return (
+    <NodeViewWrapper className="mailing-image relative block my-2 group">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={node.attrs.src}
+        alt={node.attrs.alt || ""}
+        className="block w-full max-w-full h-auto rounded"
+      />
+      <div className="absolute right-2 top-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          title="Mover imagen arriba"
+          aria-label="Mover imagen arriba"
+          onClick={() => move("up")}
+          className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
+        >
+          <ChevronUp className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          title="Mover imagen abajo"
+          aria-label="Mover imagen abajo"
+          onClick={() => move("down")}
+          className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+const MailingImage = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(MailingImageView);
+  },
+});
 
 interface RichTextEditorProps {
   value: string;
