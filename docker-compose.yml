@@ -26,9 +26,11 @@ services:
       - certificates:/app/public/certificates
       # Uploads locales (logos, programas) viven en /app/public y se sirven
       # públicamente por la app; los volúmenes evitan que se pierdan al redeploy.
-      - logos:/app/public/logos
-      - programas:/app/public/programas
-      - uploads:/app/public/uploads
+      # Nombres *_data: al ser nuevos, Docker los crea heredando el ownership
+      # nextjs de las carpetas en la imagen (requisito: chown en Dockerfile).
+      - logos_data:/app/public/logos
+      - programas_data:/app/public/programas
+      - uploads_data:/app/public/uploads
     networks:
       - dokploy-network
     restart: unless-stopped
@@ -41,6 +43,6 @@ networks:
 
 volumes:
   certificates:
-  logos:
-  programas:
-  uploads:
+  logos_data:
+  programas_data:
+  uploads_data:
