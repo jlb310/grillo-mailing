@@ -126,8 +126,15 @@ export default function NewCampaignPage() {
   }
 
   const handleTestSend = async () => {
-    if (!testEmail || !formData.subject || !formData.htmlContent || !formData.fromEmail || !formData.domainId) {
-      setTestResult({ type: "error", message: "Completa asunto, contenido HTML, remitente, dominio y email de prueba" })
+    const missing: string[] = []
+    if (!formData.subject) missing.push("asunto")
+    if (!formData.fromEmail) missing.push("email del remitente")
+    if (!formData.domainId) missing.push("dominio de envío")
+    if (!formData.htmlContent) missing.push("contenido del email (agrega al menos un bloque en el editor)")
+    if (!testEmail) missing.push("email de prueba")
+
+    if (missing.length > 0) {
+      setTestResult({ type: "error", message: `Faltan campos obligatorios: ${missing.join(", ")}` })
       return
     }
 
@@ -237,7 +244,7 @@ export default function NewCampaignPage() {
             <Button
               variant="outline"
               onClick={handleTestSend}
-              disabled={testing || !testEmail || !formData.subject || !formData.htmlContent || !formData.domainId}
+              disabled={testing}
               className="h-10 rounded-xl border-border text-foreground hover:bg-background-muted mt-5"
             >
               <Mail className="w-4 h-4 mr-2" />
