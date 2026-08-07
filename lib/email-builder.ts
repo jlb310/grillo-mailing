@@ -245,20 +245,42 @@ export function renderButton(text: string, url: string, color: string): string {
 // que el usuario pueda moverlo arriba/abajo entre imágenes y texto.
 const PRODUCTS_MARKER_RE = /<div[^>]*data-products-marker="true"[^>]*>\s*<\/div>/i;
 
+// Sets a tag's base inline style without clobbering one TipTap already put
+// there (e.g. TextAlign renders `style="text-align: center"` on <p>/<h2>).
+// A second `.replace` that blindly injects `style="..."` right after the tag
+// name would produce two duplicate `style` attributes — HTML keeps only the
+// first, silently dropping the alignment. Merging into the existing
+// attribute (base first, so TipTap's value can override, e.g. text-align)
+// keeps both.
+function injectStyle(html: string, tag: string, baseStyle: string): string {
+  return html.replace(new RegExp(`<${tag}([^>]*)>`, "g"), (match, attrs) => {
+    const existing = attrs.match(/\sstyle="([^"]*)"/);
+    if (existing) {
+      const merged = `${baseStyle} ${existing[1]}`;
+      return `<${tag}${attrs.replace(/\sstyle="[^"]*"/, ` style="${merged}"`)}>`;
+    }
+    return `<${tag}${attrs} style="${baseStyle}">`;
+  });
+}
+
 // Inline styles for TipTap-generated HTML tags so Outlook renders them correctly
 // Images: width="536" = 600px container minus 32px padding each side
 function normalizeBodyHtml(html: string): string {
-  return html
-    .replace(/<h2/g, '<h2 style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#1f2937;margin:24px 0 8px;"')
-    .replace(/<h3/g, '<h3 style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#374151;margin:20px 0 6px;"')
-    .replace(/<p/g,  '<p style="font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;"')
-    .replace(/<ul/g, '<ul style="font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;padding-left:20px;"')
-    .replace(/<ol/g, '<ol style="font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;padding-left:20px;"')
+  let out = html;
+  out = injectStyle(out, "h2", "font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#1f2937;margin:24px 0 8px;");
+  out = injectStyle(out, "h3", "font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#374151;margin:20px 0 6px;");
+  out = injectStyle(out, "p",  "font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;");
+  out = injectStyle(out, "ul", "font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;padding-left:20px;");
+  out = injectStyle(out, "ol", "font-family:Arial,sans-serif;font-size:15px;color:#333333;line-height:1.7;margin:0 0 14px;padding-left:20px;");
+  // width="536" is a real HTML attribute (not just CSS): Outlook's Word engine
+  // ignores max-width, so it's the fallback that keeps images from overflowing there.
+  out = out.replace(/<img /g, '<img width="536" ');
+  out = injectStyle(out, "img", "display:block;width:100%;max-width:536px;height:auto;");
+  return out
     .replace(/<li/g, '<li style="margin-bottom:4px;"')
     .replace(/<strong/g, '<strong style="font-weight:bold;"')
     .replace(/<em/g,     '<em style="font-style:italic;"')
-    .replace(/<u>/g,     '<u style="text-decoration:underline;">')
-    .replace(/<img /g,   '<img width="536" style="display:block;width:100%;max-width:536px;height:auto;" ');
+    .replace(/<u>/g,     '<u style="text-decoration:underline;">');
 }
 
 function renderProductButton(text: string, url: string, color: string): string {
@@ -337,13 +359,13 @@ function renderProducts(fields: EmailBuilderFields): string {
 // como su propia fila de tabla. Envuelta en <a> solo si hay link.
 function renderPreFooterImage(fields: EmailBuilderFields): string {
   if (!fields.preFooterImageUrl) return "";
-  const img = `<img src="${escapeAttr(fields.preFooterImageUrl)}" alt="" width="536" style="display:block;width:100%;max-width:536px;height:auto;border:0;outline:none;text-decoration:none;" />`;
+  const img = `<img src="${escapeAttr(fields.preFooterImageUrl)}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;" />`;
   const content = fields.preFooterImageLink
     ? `<a href="${safeHref(fields.preFooterImageLink)}" target="_blank" style="text-decoration:none;">${img}</a>`
     : img;
   return `
 <tr>
-  <td align="center" bgcolor="#ffffff" style="padding:0 32px 32px;background-color:#ffffff;">
+  <td align="center" bgcolor="#ffffff" style="padding:0 0 4px;background-color:#ffffff;">
     ${content}
   </td>
 </tr>`;
@@ -363,7 +385,7 @@ function renderSocials(fields: EmailBuilderFields): string {
     ${socials.map((s) => `
     <td align="center" style="padding:0 6px;">
       <a href="${safeHref(s.url)}" target="_blank" style="text-decoration:none;">
-        <img src="${EVENT_ICON_BASE}/social-${s.network}.png" width="44" height="44" alt="${escapeAttr(SOCIAL_NETWORKS[s.network].label)}" style="display:block;width:44px;height:44px;border:0;outline:none;text-decoration:none;" />
+        <img src="${EVENT_ICON_BASE}/social-${s.network}.png" width="28" height="28" alt="${escapeAttr(SOCIAL_NETWORKS[s.network].label)}" style="display:block;width:28px;height:28px;border:0;outline:none;text-decoration:none;" />
       </a>
     </td>`).join("")}
   </tr>
@@ -513,7 +535,7 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
         <!-- Footer -->
         <tr>
           <td align="center" bgcolor="#f9f9f9" style="padding-top:20px;padding-bottom:16px;padding-left:32px;padding-right:32px;background-color:#f9f9f9;border-top:1px solid #eeeeee;">
-            <img src="${logoUrl}" alt="${fields.logoAlt ?? DEFAULT_LOGO_TEXT}" height="28" width="auto" style="display:block;margin:0 auto 10px;height:28px;border:0;outline:none;text-decoration:none;" />
+            <img src="${logoUrl}" alt="${fields.logoAlt ?? DEFAULT_LOGO_TEXT}" height="40" width="auto" style="display:block;margin:0 auto 10px;height:40px;border:0;outline:none;text-decoration:none;" />
             ${renderSocials(fields)}
             <p style="font-family:Arial,sans-serif;font-size:12px;color:#999999;line-height:1.5;margin:0 0 10px;">${footerText}</p>
             <p style="font-family:Arial,sans-serif;font-size:10px;color:#cccccc;margin:0 0 8px;">Enviado con <a href="https://grillo.click" target="_blank" style="color:#cccccc;text-decoration:underline;font-family:Arial,sans-serif;font-size:10px;">Grillo Mailing</a>.</p>
