@@ -232,6 +232,11 @@ export function renderButton(text: string, url: string, color: string): string {
 </table>`;
 }
 
+// Marcador de posición para la grilla de productos, insertado desde el editor
+// de cuerpo (ver components/rich-text-editor.tsx: ProductsMarker node) para
+// que el usuario pueda moverlo arriba/abajo entre imágenes y texto.
+const PRODUCTS_MARKER_RE = /<div[^>]*data-products-marker="true"[^>]*>\s*<\/div>/i;
+
 // Inline styles for TipTap-generated HTML tags so Outlook renders them correctly
 // Images: width="536" = 600px container minus 32px padding each side
 function normalizeBodyHtml(html: string): string {
@@ -392,8 +397,17 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
   // and before the CTA button: gráfica → iconos con información → inscripción.
   bodyHtml += renderInfoIcons(fields);
 
-  // Productos en grilla de 2 columnas (foto, título, precio, botón).
-  bodyHtml += renderProducts(fields);
+  // Productos en grilla de 2 columnas (foto, título, precio, botón). Si el
+  // cuerpo trae el marcador de posición (insertado y movido desde el editor
+  // como un bloque más, junto a las imágenes), los productos se insertan ahí
+  // en vez de al final — así el usuario controla el orden. Sin marcador,
+  // se mantiene el comportamiento anterior: productos al final del cuerpo.
+  const productsHtml = renderProducts(fields);
+  if (PRODUCTS_MARKER_RE.test(bodyHtml)) {
+    bodyHtml = bodyHtml.replace(PRODUCTS_MARKER_RE, productsHtml).replace(PRODUCTS_MARKER_RE, "");
+  } else {
+    bodyHtml += productsHtml;
+  }
 
   // CTA buttons
   const buttons: { text: string; url: string; color: string }[] = [];

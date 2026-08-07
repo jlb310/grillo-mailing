@@ -8,6 +8,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
+import { Node as TiptapNode, mergeAttributes, type Editor } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { Fragment, Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
@@ -16,44 +17,72 @@ import {
   Bold, Italic, UnderlineIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Link as LinkIcon, Unlink,
-  Heading2, Heading3, Pilcrow, ImageIcon, Loader2, ChevronUp, ChevronDown,
+  Heading2, Heading3, Pilcrow, ImageIcon, Loader2, ChevronUp, ChevronDown, LayoutGrid,
 } from "lucide-react";
+
+// Swaps the node at `getPos` with its previous/next sibling among the root
+// blocks of the document. Shared by the image and products-marker NodeViews
+// so both can be reordered with the same up/down controls.
+function moveNode(editor: Editor, getPos: () => number | undefined, dir: "up" | "down") {
+  if (!editor || !getPos) return;
+  const { state } = editor;
+  const startPos = getPos();
+  if (startPos === undefined) return;
+  const $p = state.doc.resolve(startPos);
+  // Solo reordenamos nodos que son bloques raíz del cuerpo.
+  const parent = $p.parent;
+  if (parent !== state.doc) return;
+
+  let idx = -1;
+  let offset = 0;
+  for (let i = 0; i < parent.childCount; i++) {
+    if (offset === startPos) { idx = i; break; }
+    offset += parent.child(i).nodeSize;
+  }
+  if (idx < 0) return;
+
+  const targetIdx = idx + (dir === "up" ? -1 : 1);
+  if (targetIdx < 0 || targetIdx >= parent.childCount) return;
+
+  const children: ProseMirrorNode[] = [];
+  parent.forEach((c) => children.push(c));
+  [children[idx], children[targetIdx]] = [children[targetIdx], children[idx]];
+
+  const tr = state.tr.replaceWith(0, state.doc.content.size, Fragment.fromArray(children));
+
+  let newPos = 0;
+  for (let i = 0; i < targetIdx; i++) newPos += children[i].nodeSize;
+  tr.setSelection(NodeSelection.create(tr.doc, newPos));
+  editor.view.dispatch(tr);
+}
+
+function MoveButtons({ onMove }: { onMove: (dir: "up" | "down") => void }) {
+  return (
+    <div className="absolute right-2 top-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        type="button"
+        title="Mover arriba"
+        aria-label="Mover arriba"
+        onClick={() => onMove("up")}
+        className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
+      >
+        <ChevronUp className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        title="Mover abajo"
+        aria-label="Mover abajo"
+        onClick={() => onMove("down")}
+        className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
+      >
+        <ChevronDown className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
 
 // NodeView for the image: lets you move the image up/​down within the body.
 function MailingImageView({ node, editor, getPos }: NodeViewProps) {
-  function move(dir: "up" | "down") {
-    if (!editor || !getPos) return;
-    const { state } = editor;
-    const startPos = getPos();
-    if (startPos === undefined) return;
-    const $p = state.doc.resolve(startPos);
-    // Solo reordenamos imágenes que son bloques raíz del cuerpo.
-    const parent = $p.parent;
-    if (parent !== state.doc) return;
-
-    let idx = -1;
-    let offset = 0;
-    for (let i = 0; i < parent.childCount; i++) {
-      if (offset === startPos) { idx = i; break; }
-      offset += parent.child(i).nodeSize;
-    }
-    if (idx < 0) return;
-
-    const targetIdx = idx + (dir === "up" ? -1 : 1);
-    if (targetIdx < 0 || targetIdx >= parent.childCount) return;
-
-    const children: ProseMirrorNode[] = [];
-    parent.forEach((c) => children.push(c));
-    [children[idx], children[targetIdx]] = [children[targetIdx], children[idx]];
-
-    const tr = state.tr.replaceWith(0, state.doc.content.size, Fragment.fromArray(children));
-
-    let newPos = 0;
-    for (let i = 0; i < targetIdx; i++) newPos += children[i].nodeSize;
-    tr.setSelection(NodeSelection.create(tr.doc, newPos));
-    editor.view.dispatch(tr);
-  }
-
   return (
     <NodeViewWrapper className="mailing-image relative block my-2 group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -62,26 +91,7 @@ function MailingImageView({ node, editor, getPos }: NodeViewProps) {
         alt={node.attrs.alt || ""}
         className="block w-full max-w-full h-auto rounded"
       />
-      <div className="absolute right-2 top-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          type="button"
-          title="Mover imagen arriba"
-          aria-label="Mover imagen arriba"
-          onClick={() => move("up")}
-          className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
-        >
-          <ChevronUp className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          title="Mover imagen abajo"
-          aria-label="Mover imagen abajo"
-          onClick={() => move("down")}
-          className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded shadow"
-        >
-          <ChevronDown className="w-4 h-4" />
-        </button>
-      </div>
+      <MoveButtons onMove={(dir) => moveNode(editor, getPos, dir)} />
     </NodeViewWrapper>
   );
 }
@@ -91,6 +101,49 @@ const MailingImage = Image.extend({
     return ReactNodeViewRenderer(MailingImageView);
   },
 });
+
+// Marker block that stands in for the products grid within the body flow, so
+// it can be reordered against images/text with the same up/down controls.
+// Rendered to `<div data-products-marker="true"></div>`; lib/email-builder.ts
+// swaps that marker for the actual rendered product grid HTML.
+const PRODUCTS_MARKER_ATTR = "data-products-marker";
+
+function ProductsMarkerView({ editor, getPos }: NodeViewProps) {
+  return (
+    <NodeViewWrapper className="relative block my-2 group" data-drag-handle>
+      <div className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg py-4 text-sm text-gray-500 bg-gray-50 select-none">
+        <LayoutGrid className="w-4 h-4" />
+        Grilla de productos
+      </div>
+      <MoveButtons onMove={(dir) => moveNode(editor, getPos, dir)} />
+    </NodeViewWrapper>
+  );
+}
+
+const ProductsMarker = TiptapNode.create({
+  name: "productsMarker",
+  group: "block",
+  atom: true,
+  selectable: true,
+  parseHTML() {
+    return [{ tag: `div[${PRODUCTS_MARKER_ATTR}="true"]` }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, { [PRODUCTS_MARKER_ATTR]: "true" })];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ProductsMarkerView);
+  },
+});
+
+function docHasProductsMarker(editor: Editor | null): boolean {
+  if (!editor) return false;
+  let found = false;
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === "productsMarker") found = true;
+  });
+  return found;
+}
 
 interface RichTextEditorProps {
   value: string;
@@ -113,6 +166,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({ openOnClick: false, HTMLAttributes: { style: "color:#207029;text-decoration:underline;" } }),
       MailingImage.configure({ HTMLAttributes: { style: "max-width:100%;height:auto;border-radius:4px;" } }),
+      ProductsMarker,
     ],
     content: value || "",
     onUpdate({ editor }) {
@@ -159,6 +213,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   }
 
   if (!editor) return null;
+
+  const hasProductsMarker = docHasProductsMarker(editor);
 
   const btn = (active: boolean, onClick: () => void, title: string, children: React.ReactNode) => (
     <button
@@ -228,6 +284,15 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
             className="p-1.5 rounded transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
           >
             {uploadingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            type="button"
+            title={hasProductsMarker ? "La grilla de productos ya está en el cuerpo" : "Insertar grilla de productos"}
+            disabled={hasProductsMarker}
+            onClick={() => editor.chain().focus().insertContent({ type: "productsMarker" }).run()}
+            className="p-1.5 rounded transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
           </button>
         </div>
 
