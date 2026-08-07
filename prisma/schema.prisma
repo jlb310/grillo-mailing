@@ -72,6 +72,9 @@ model Campaign {
   iconDate      String?
   iconLinkText  String?
   iconLinkUrl   String?
+  // Imagen fija justo antes del footer (debajo de productos/cuerpo), con link opcional.
+  preFooterImageUrl  String?
+  preFooterImageLink String?
   useAlemanaFooter Boolean      @default(true)
   eventInfoButtons Boolean      @default(false)
   notifyEmails  String[]

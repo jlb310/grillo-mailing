@@ -93,6 +93,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       iconDate: body.iconDate,
       iconLinkText: body.iconLinkText,
       iconLinkUrl: body.iconLinkUrl,
+      preFooterImageUrl: body.preFooterImageUrl,
+      preFooterImageLink: body.preFooterImageLink,
       useAlemanaFooter: body.useAlemanaFooter ?? undefined,
       eventInfoButtons: body.eventInfoButtons ?? undefined,
       status: body.status,

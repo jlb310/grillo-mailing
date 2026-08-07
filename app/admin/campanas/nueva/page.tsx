@@ -68,6 +68,10 @@ function EmailBuilderForm() {
   // Footer
   const [footerText, setFooterText] = useState("Grillo Mailing — correo.grillo.click");
   const [useAlemanaFooter, setUseAlemanaFooter] = useState(true);
+  const preFooterImageFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingPreFooterImage, setUploadingPreFooterImage] = useState(false);
+  const [preFooterImageUrl, setPreFooterImageUrl] = useState("");
+  const [preFooterImageLink, setPreFooterImageLink] = useState("");
   const [socials, setSocials] = useState<SocialItem[]>([]);
 
   useEffect(() => {
@@ -94,6 +98,8 @@ function EmailBuilderForm() {
       setEmailTitle(c.emailTitle ?? "");
       setEmailSubtitle(c.emailSubtitle ?? "");
       setFooterText(c.footerText ?? "Grillo Mailing — correo.grillo.click");
+      setPreFooterImageUrl(c.preFooterImageUrl ?? "");
+      setPreFooterImageLink(c.preFooterImageLink ?? "");
       if (c.products && Array.isArray(c.products)) setProducts(c.products as ProductItem[]);
       if (c.socials && Array.isArray(c.socials)) setSocials(c.socials as SocialItem[]);
       // Load body and CTA buttons
@@ -111,7 +117,8 @@ function EmailBuilderForm() {
     emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
     iconDate, iconLinkText, iconLinkUrl,
     emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials,
-  }), [logoUrl, logoAlt, logoHeight, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials]);
+    preFooterImageUrl, preFooterImageLink,
+  }), [logoUrl, logoAlt, logoHeight, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials, preFooterImageUrl, preFooterImageLink]);
 
   const previewHtml = useMemo(() => buildEmailHtml(builderFields), [builderFields]);
 
@@ -176,6 +183,22 @@ function EmailBuilderForm() {
     setSocials((prev) => prev.filter((s) => s.id !== id));
   }
 
+  async function uploadPreFooterImage(file: File) {
+    setUploadingPreFooterImage(true);
+    setError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "uploads");
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (data.url) {
+      setPreFooterImageUrl(data.url);
+    } else {
+      setError(data.error ?? "No se pudo subir la imagen. Inténtalo de nuevo.");
+    }
+    setUploadingPreFooterImage(false);
+  }
+
   async function uploadPrograma(file: File) {
     setUploadingPrograma(true);
     setError("");
@@ -221,6 +244,7 @@ function EmailBuilderForm() {
       emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
       iconDate, iconLinkText, iconLinkUrl,
       emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials, programaUrl,
+      preFooterImageUrl, preFooterImageLink,
     };
     try {
       const url = editId ? `/api/campanas/${editId}` : "/api/campanas";
@@ -589,6 +613,46 @@ function EmailBuilderForm() {
                     />
                   </div>
                 ))}
+              </div>
+
+              {/* Imagen pre-footer: fija justo antes del footer, debajo del cuerpo/productos */}
+              <div className="space-y-2 mt-6 pt-4 border-t border-gray-100">
+                <Label className="text-xs text-gray-500 uppercase tracking-wide">Imagen pre-footer</Label>
+                <p className="text-xs text-gray-400">Se muestra siempre debajo del cuerpo y los productos, justo antes del footer.</p>
+                <input
+                  ref={preFooterImageFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPreFooterImage(f); e.target.value = ""; }}
+                />
+                {preFooterImageUrl ? (
+                  <div className="border border-gray-100 rounded-lg p-2 flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preFooterImageUrl} alt="" className="w-14 h-14 object-cover rounded" />
+                    <div className="flex-1 flex flex-col gap-1">
+                      <button onClick={() => preFooterImageFileRef.current?.click()} disabled={uploadingPreFooterImage}
+                        className="text-xs text-[#207029] hover:underline text-left disabled:opacity-50">
+                        {uploadingPreFooterImage ? "Subiendo..." : "Cambiar imagen"}
+                      </button>
+                      <button onClick={() => setPreFooterImageUrl("")} className="text-xs text-gray-400 hover:text-red-500 text-left">
+                        Quitar imagen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" className="h-8 text-xs" disabled={uploadingPreFooterImage}
+                    onClick={() => preFooterImageFileRef.current?.click()}>
+                    <Upload className="w-3 h-3 mr-1" />
+                    {uploadingPreFooterImage ? "Subiendo..." : "Subir imagen"}
+                  </Button>
+                )}
+                <Input
+                  placeholder="Link opcional al hacer click (https://...)"
+                  value={preFooterImageLink}
+                  onChange={(e) => setPreFooterImageLink(e.target.value)}
+                  className="text-sm"
+                />
               </div>
 
               <div className="space-y-2 mt-6 pt-4 border-t border-gray-100">

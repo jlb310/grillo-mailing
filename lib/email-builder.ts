@@ -86,6 +86,10 @@ export interface EmailBuilderFields {
   iconLinkText?: string;
   /** Destination of the circular document icon link. */
   iconLinkUrl?: string;
+  /** Imagen fija justo antes del footer (debajo de cuerpo/productos). */
+  preFooterImageUrl?: string;
+  /** Link opcional al hacer click en preFooterImageUrl. */
+  preFooterImageLink?: string;
 }
 
 const DEFAULT_HEADER_COLOR = "#207029";
@@ -315,6 +319,22 @@ function renderProducts(fields: EmailBuilderFields): string {
 </table>`;
 }
 
+// Imagen fija justo antes del footer (debajo de cuerpo/productos/botones),
+// como su propia fila de tabla. Envuelta en <a> solo si hay link.
+function renderPreFooterImage(fields: EmailBuilderFields): string {
+  if (!fields.preFooterImageUrl) return "";
+  const img = `<img src="${escapeAttr(fields.preFooterImageUrl)}" alt="" width="536" style="display:block;width:100%;max-width:536px;height:auto;border:0;outline:none;text-decoration:none;" />`;
+  const content = fields.preFooterImageLink
+    ? `<a href="${safeHref(fields.preFooterImageLink)}" target="_blank" style="text-decoration:none;">${img}</a>`
+    : img;
+  return `
+<tr>
+  <td align="center" bgcolor="#ffffff" style="padding:0 32px 32px;background-color:#ffffff;">
+    ${content}
+  </td>
+</tr>`;
+}
+
 // Centered round social icons for the footer (up to 4). Icons are committed
 // self-contained PNGs (white glyph on a brand-color circle), so they render
 // identically in every client — no SVG, no border-radius hacks.
@@ -471,6 +491,8 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
             ${buttonsHtml}
           </td>
         </tr>
+
+        ${renderPreFooterImage(fields)}
 
         ${fields.useAlemanaFooter === false ? "" : renderGrilloFooter()}
 
