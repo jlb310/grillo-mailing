@@ -12,6 +12,10 @@ export interface ProductItem {
   imageUrl: string;
   title: string;
   price: string;
+  /** Precio anterior, tachado y más chico junto al precio. */
+  oldPrice?: string;
+  /** Texto del cuadrito de descuento sobre la imagen, ej. "-20%". */
+  discountPercent?: string;
   buttonText: string;
   buttonUrl: string;
   buttonColor: string;
@@ -276,18 +280,28 @@ function renderProductCard(p: ProductItem, color: string, lone = false): string 
   const innerStyle = lone
     ? "border:1px solid #eeeeee;border-radius:12px;background-color:#ffffff;max-width:280px;"
     : "border:1px solid #eeeeee;border-radius:12px;background-color:#ffffff;";
+  const buttonColor = p.buttonColor || color;
+  // Cuadrito de descuento sobre la foto, esquina superior derecha, en el
+  // mismo color del botón. position:absolute se degrada con gracia en
+  // clientes que no lo soportan (Outlook desktop): el cuadrito simplemente
+  // no se ve, no rompe el layout de la tarjeta.
+  const discountBadge = p.discountPercent
+    ? `<div style="position:absolute;top:8px;right:8px;background:${buttonColor};color:#ffffff;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;line-height:1;padding:5px 9px;border-radius:6px;">${escapeHtml(p.discountPercent)}</div>`
+    : "";
   const img = p.imageUrl
     ? `<tr><td align="center" style="padding:14px 14px 0;">
-         <img src="${escapeAttr(p.imageUrl)}" alt="${escapeAttr(p.title)}" width="236" style="display:block;width:100%;max-width:236px;height:auto;border-radius:8px;border:0;outline:none;text-decoration:none;" />
+         <div style="position:relative;display:inline-block;width:100%;max-width:236px;">
+           <img src="${escapeAttr(p.imageUrl)}" alt="${escapeAttr(p.title)}" width="236" style="display:block;width:100%;max-width:236px;height:auto;border-radius:8px;border:0;outline:none;text-decoration:none;" />
+           ${discountBadge}
+         </div>
        </td></tr>`
     : "";
   const title = p.title
     ? `<tr><td align="center" style="padding:10px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#1f2937;line-height:1.35;">${escapeHtml(p.title)}</div></td></tr>`
     : "";
   const price = p.price
-    ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#1f2937;line-height:1.2;">${escapeHtml(p.price)}</div></td></tr>`
+    ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;line-height:1.2;">${p.oldPrice ? `<span style="font-size:13px;font-weight:normal;color:#9ca3af;text-decoration:line-through;margin-right:6px;">${escapeHtml(p.oldPrice)}</span>` : ""}<span style="font-size:18px;font-weight:bold;color:#1f2937;">${escapeHtml(p.price)}</span></div></td></tr>`
     : "";
-  const buttonColor = p.buttonColor || color;
   const button = p.buttonText && p.buttonUrl
     ? `<tr><td align="center" style="padding:10px 14px 14px;">${renderProductButton(p.buttonText, p.buttonUrl, buttonColor)}</td></tr>`
     : `<tr><td style="padding:14px;">&nbsp;</td></tr>`;

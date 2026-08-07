@@ -492,7 +492,11 @@ function EmailBuilderForm() {
                         </label>
                       )}
                       <Input placeholder="Título" value={p.title} onChange={(e) => updateProduct(p.id, "title", e.target.value)} className="text-sm" />
-                      <Input placeholder="Precio (ej: $19.990)" value={p.price} onChange={(e) => updateProduct(p.id, "price", e.target.value)} className="text-sm" />
+                      <div className="flex gap-2">
+                        <Input placeholder="Precio anterior (ej: $29.990)" value={p.oldPrice ?? ""} onChange={(e) => updateProduct(p.id, "oldPrice", e.target.value)} className="text-sm flex-1" />
+                        <Input placeholder="Precio (ej: $19.990)" value={p.price} onChange={(e) => updateProduct(p.id, "price", e.target.value)} className="text-sm flex-1" />
+                      </div>
+                      <Input placeholder="Descuento sobre la foto (ej: -20%)" value={p.discountPercent ?? ""} onChange={(e) => updateProduct(p.id, "discountPercent", e.target.value)} className="text-sm" />
                       <div className="space-y-1">
                         <Input placeholder="Texto del botón" value={p.buttonText} onChange={(e) => updateProduct(p.id, "buttonText", e.target.value)} className="text-sm" />
                         <Input placeholder="URL del botón (https://...)" value={p.buttonUrl} onChange={(e) => updateProduct(p.id, "buttonUrl", e.target.value)} className="text-sm" />
