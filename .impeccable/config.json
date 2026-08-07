@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-08-07T00:28:59.464Z",
+        "reason": "HTML de email transaccional: Arial es la fuente web-safe correcta para clientes de correo, no un descuido de diseño"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "lib/email-builder.ts"
+        ],
+        "createdAt": "2026-08-07T00:28:59.585Z",
+        "reason": "Borde lateral de color es un patrón habitual de diseño de email, no un tell de UI generada por IA"
+      }
+    ]
+  }
+}
