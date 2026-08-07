@@ -8,8 +8,8 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
-import { Fragment } from "@tiptap/pm/model";
+import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from "@tiptap/react";
+import { Fragment, Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useEffect, useCallback, useRef, useState } from "react";
 import {
@@ -20,11 +20,12 @@ import {
 } from "lucide-react";
 
 // NodeView for the image: lets you move the image up/​down within the body.
-function MailingImageView({ node, editor, getPos }: any) {
+function MailingImageView({ node, editor, getPos }: NodeViewProps) {
   function move(dir: "up" | "down") {
     if (!editor || !getPos) return;
     const { state } = editor;
-    const startPos = typeof getPos === "function" ? getPos() : (getPos as number);
+    const startPos = getPos();
+    if (startPos === undefined) return;
     const $p = state.doc.resolve(startPos);
     // Solo reordenamos imágenes que son bloques raíz del cuerpo.
     const parent = $p.parent;
@@ -41,7 +42,7 @@ function MailingImageView({ node, editor, getPos }: any) {
     const targetIdx = idx + (dir === "up" ? -1 : 1);
     if (targetIdx < 0 || targetIdx >= parent.childCount) return;
 
-    const children: any[] = [];
+    const children: ProseMirrorNode[] = [];
     parent.forEach((c) => children.push(c));
     [children[idx], children[targetIdx]] = [children[targetIdx], children[idx]];
 
@@ -111,7 +112,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({ openOnClick: false, HTMLAttributes: { style: "color:#207029;text-decoration:underline;" } }),
-      Image.configure({ HTMLAttributes: { style: "max-width:100%;height:auto;border-radius:4px;" } }),
+      MailingImage.configure({ HTMLAttributes: { style: "max-width:100%;height:auto;border-radius:4px;" } }),
     ],
     content: value || "",
     onUpdate({ editor }) {

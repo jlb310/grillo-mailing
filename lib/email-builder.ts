@@ -276,7 +276,7 @@ function renderProductCard(p: ProductItem, color: string, lone = false): string 
     ? `<tr><td align="center" style="padding:10px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#1f2937;line-height:1.35;">${escapeHtml(p.title)}</div></td></tr>`
     : "";
   const price = p.price
-    ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:${color};line-height:1.2;">${escapeHtml(p.price)}</div></td></tr>`
+    ? `<tr><td align="center" style="padding:8px 14px 0;"><div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#1f2937;line-height:1.2;">${escapeHtml(p.price)}</div></td></tr>`
     : "";
   const buttonColor = p.buttonColor || color;
   const button = p.buttonText && p.buttonUrl
