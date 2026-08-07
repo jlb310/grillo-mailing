@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getResend, FROM, REPORT_RECIPIENTS } from "@/lib/resend";
+import { getResend, FROM, REPORT_RECIPIENTS, resolveEmpresaSender } from "@/lib/resend";
 import { getTrackingStatus } from "@/lib/resend-status";
 import { BASE_URL } from "@/lib/base-url";
 
@@ -45,12 +45,13 @@ type SingleResult = "sent" | "invalid" | "ratelimit" | "quota";
 // the run; only a genuine rejection (e.g. 422) counts as an invalid address.
 async function sendOne(
   resend: ReturnType<typeof getResend>,
+  from: string,
   subject: string,
   e: { to: string; name: string; logId: string; html: string }
 ): Promise<SingleResult> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const single = await resend.emails.send({
-      from: FROM(),
+      from,
       to: [toAddress(e.name, e.to)],
       subject,
       html: e.html,
@@ -121,10 +122,17 @@ export async function runSend(campaignId: string) {
     });
     if (!campaign) return;
 
+    // Own Resend account/domain when the empresa has one configured, else the
+    // shared Grillo account — this is what actually sends to real recipients.
+    const sender = resolveEmpresaSender(campaign.empresa);
+
     // Snapshot whether Resend open/click tracking is active at send time, so the
     // metrics UI can distinguish "0 opens because untracked" from "0 opens for
-    // real" per campaign. Never let a diagnosis failure block the actual send.
-    const tracking = await getTrackingStatus().catch(() => null);
+    // real" per campaign. Diagnose whichever account is actually sending. Never
+    // let a diagnosis failure block the actual send.
+    const tracking = await getTrackingStatus(
+      sender.apiKey ? { apiKey: sender.apiKey, fromEmail: sender.from, webhookSecretSet: !!campaign.empresa.resendWebhookSecretEncrypted } : {}
+    ).catch(() => null);
     const trackingData = {
       openTrackingAtSend: tracking ? tracking.active && tracking.domainOpenTracking : false,
       clickTrackingAtSend: tracking ? tracking.active && tracking.domainClickTracking : false,
@@ -175,17 +183,17 @@ export async function runSend(campaignId: string) {
       })
       .filter(Boolean) as { to: string; name: string; logId: string; html: string }[];
 
-    const resend = getResend();
+    const resend = sender.resend;
     const batches = chunk(emails, BATCH_SIZE);
 
-    console.log(`[send] Campaign ${campaignId}: ${emails.length} pending, ${batches.length} batches`);
+    console.log(`[send] Campaign ${campaignId}: ${emails.length} pending, ${batches.length} batches, from ${sender.from}`);
 
     const internalHtml = campaign.htmlBody
       .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, "#")
       .replace(/\{\{VIEW_URL\}\}/g, viewUrl);
     const internalResult = await resend.batch.send(
       INTERNAL_RECIPIENTS.map(to => ({
-        from: FROM(),
+        from: sender.from,
         to: [to],
         subject: campaign.subject,
         html: internalHtml,
@@ -203,7 +211,7 @@ export async function runSend(campaignId: string) {
 
       const result = await resend.batch.send(
         batch.map(e => ({
-          from: FROM(),
+          from: sender.from,
           to: [toAddress(e.name, e.to)],
           subject: campaign.subject,
           html: e.html,
@@ -230,7 +238,7 @@ export async function runSend(campaignId: string) {
           let batchSent = 0;
           let batchSkipped = 0;
           for (const e of batch) {
-            const outcome = await sendOne(resend, campaign.subject, e);
+            const outcome = await sendOne(resend, sender.from, campaign.subject, e);
             if (outcome === "sent") {
               batchSent++;
             } else if (outcome === "invalid") {

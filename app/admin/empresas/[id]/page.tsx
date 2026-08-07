@@ -6,9 +6,10 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, Plus, Mail, Building2 } from "lucide-react";
+import { ArrowLeft, Users, Plus, Mail, Building2, Send } from "lucide-react";
 import UploadContactosButton from "./upload-contactos-button";
 import GruposPanel from "./grupos-panel";
+import ResendPanel from "./resend-panel";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -136,6 +137,24 @@ export default async function EmpresaDetailPage({ params }: Props) {
                 }
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Envío: cuenta Resend propia de la empresa */}
+        <Card className="col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Send className="w-4 h-4 text-[#207029]" /> Envío
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResendPanel
+              empresaId={empresa.id}
+              resendFromName={empresa.resendFromName}
+              resendFromEmail={empresa.resendFromEmail}
+              resendApiKeyConfigured={!!empresa.resendApiKeyEncrypted}
+              resendWebhookSecretConfigured={!!empresa.resendWebhookSecretEncrypted}
+            />
           </CardContent>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+import { Resend } from "resend";
 import { getResend } from "@/lib/resend";
 import { BASE_URL } from "@/lib/base-url";
 
@@ -60,16 +61,16 @@ function webhookUrl(): string {
   return `${BASE_URL}/api/webhooks/resend`;
 }
 
-function sendingDomain(): string | null {
-  const from = process.env.RESEND_FROM ?? "";
+function sendingDomain(fromEmail?: string): string | null {
+  const from = fromEmail ?? process.env.RESEND_FROM ?? "";
   const m = from.match(/@([^\s>]+)/);
   return m ? m[1].toLowerCase() : null;
 }
 
-function unknownStatus(reason: string): TrackingStatus {
+function unknownStatus(reason: string, fromEmail?: string, svixSet = !!process.env.SVIX_SECRET): TrackingStatus {
   return {
     active: false,
-    domainName: sendingDomain(),
+    domainName: sendingDomain(fromEmail),
     domainFound: false,
     domainOpenTracking: false,
     domainClickTracking: false,
@@ -79,22 +80,33 @@ function unknownStatus(reason: string): TrackingStatus {
     webhookConfigured: false,
     webhookEnabled: false,
     webhookMissingEvents: [...REQUIRED_OPEN_CLICK],
-    svixSet: !!process.env.SVIX_SECRET,
+    svixSet,
     reason,
     unknown: true,
   };
 }
 
-export async function getTrackingStatus(): Promise<TrackingStatus> {
-  if (!process.env.RESEND_API_KEY) {
-    return unknownStatus("No se pudo verificar: falta RESEND_API_KEY en el entorno.");
+// Overrides let a caller diagnose an empresa's OWN Resend account (own
+// apiKey/fromEmail/webhookSecret) instead of the shared Grillo one — same
+// checks, different account. Omit them to check the shared account.
+export interface TrackingStatusOverrides {
+  apiKey?: string;
+  fromEmail?: string;
+  webhookSecretSet?: boolean;
+}
+
+export async function getTrackingStatus(overrides: TrackingStatusOverrides = {}): Promise<TrackingStatus> {
+  const apiKey = overrides.apiKey ?? process.env.RESEND_API_KEY;
+  const svixSet = overrides.apiKey ? !!overrides.webhookSecretSet : !!process.env.SVIX_SECRET;
+
+  if (!apiKey) {
+    return unknownStatus("No se pudo verificar: falta RESEND_API_KEY en el entorno.", overrides.fromEmail, svixSet);
   }
 
-  const domainName = sendingDomain();
-  const svixSet = !!process.env.SVIX_SECRET;
+  const domainName = sendingDomain(overrides.fromEmail);
 
   try {
-    const resend = getResend();
+    const resend = overrides.apiKey ? new Resend(overrides.apiKey) : getResend();
 
     // ── Domain open/click tracking ──────────────────────────────────────────
     let domainFound = false;
@@ -187,6 +199,6 @@ export async function getTrackingStatus(): Promise<TrackingStatus> {
     };
   } catch (err) {
     console.error("[resend-status] Error querying Resend:", err);
-    return unknownStatus("No se pudo verificar el estado con Resend en este momento.");
+    return unknownStatus("No se pudo verificar el estado con Resend en este momento.", overrides.fromEmail, svixSet);
   }
 }

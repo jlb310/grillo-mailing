@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getResend, FROM } from "@/lib/resend";
+import { resolveEmpresaSender } from "@/lib/resend";
 import { BASE_URL } from "@/lib/base-url";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "No emails provided" }, { status: 400 });
   }
 
-  const campaign = await prisma.campaign.findUnique({ where: { id } });
+  const campaign = await prisma.campaign.findUnique({ where: { id }, include: { empresa: true } });
   if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const viewUrl = `${BASE_URL}/email/${id}`;
@@ -23,13 +23,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, "#")
     .replace(/\{\{VIEW_URL\}\}/g, viewUrl);
 
-  const resend = getResend();
+  const { resend, from } = resolveEmpresaSender(campaign.empresa);
   const errors: string[] = [];
 
   for (const email of emails) {
     try {
       await resend.emails.send({
-        from: FROM(),
+        from,
         to: email,
         subject: `[PRUEBA] ${campaign.subject}`,
         html,

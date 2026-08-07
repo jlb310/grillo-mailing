@@ -1,13 +1,37 @@
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { prisma } from "@/lib/prisma";
+import { decrypt } from "@/lib/crypto";
 
 const LOG = "[resend-webhook]";
 
+// Every empresa's own Resend account can point its webhook at this same
+// shared endpoint, but each one signs with a DIFFERENT secret (its own
+// account's signing secret, not the shared SVIX_SECRET). There is no header
+// telling us which empresa sent this, so verification tries every known
+// secret (shared + each empresa's own) until one validates.
+async function candidateSecrets(): Promise<string[]> {
+  const secrets: string[] = [];
+  if (process.env.SVIX_SECRET) secrets.push(process.env.SVIX_SECRET);
+  const empresas = await prisma.empresa.findMany({
+    where: { resendWebhookSecretEncrypted: { not: null } },
+    select: { resendWebhookSecretEncrypted: true },
+  });
+  for (const e of empresas) {
+    if (!e.resendWebhookSecretEncrypted) continue;
+    try {
+      secrets.push(decrypt(e.resendWebhookSecretEncrypted));
+    } catch (err) {
+      console.error(`${LOG} Could not decrypt an empresa's webhook secret:`, err);
+    }
+  }
+  return secrets;
+}
+
 export async function POST(req: Request) {
-  const secret = process.env.SVIX_SECRET;
-  if (!secret) {
-    console.warn(`${LOG} SVIX_SECRET not set — rejecting.`);
+  const secrets = await candidateSecrets();
+  if (secrets.length === 0) {
+    console.warn(`${LOG} No webhook secret configured (SVIX_SECRET, empresa) — rejecting.`);
     return NextResponse.json({ error: "No webhook secret" }, { status: 500 });
   }
 
@@ -18,13 +42,18 @@ export async function POST(req: Request) {
     "svix-signature": req.headers.get("svix-signature") ?? "",
   };
 
-  let payload: { type: string; data: { email_id: string } };
-  try {
-    const wh = new Webhook(secret);
-    payload = wh.verify(body, headers) as typeof payload;
-  } catch (err) {
-    // Most likely SVIX_SECRET does not match this endpoint's signing secret.
-    console.warn(`${LOG} Invalid signature (SVIX_SECRET likely wrong):`, err instanceof Error ? err.message : err);
+  type Payload = { type: string; data: { email_id: string } };
+  let payload: Payload | null = null;
+  for (const secret of secrets) {
+    try {
+      payload = new Webhook(secret).verify(body, headers) as Payload;
+      break;
+    } catch {
+      // Try the next candidate secret — this one just doesn't match.
+    }
+  }
+  if (!payload) {
+    console.warn(`${LOG} Invalid signature — matched none of ${secrets.length} known secret(s).`);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 

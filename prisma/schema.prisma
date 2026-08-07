@@ -33,6 +33,20 @@ model Empresa {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Cuenta Resend propia de la empresa (opcional). Cuando está configurada,
+  // las campañas de esta empresa se envían desde su dominio con su cuenta en
+  // vez de la cuenta/dominio genéricos de Grillo. resendApiKeyEncrypted y
+  // resendWebhookSecretEncrypted se guardan cifrados (lib/crypto.ts) — nunca
+  // en texto plano ni se devuelven al cliente.
+  resendApiKeyEncrypted        String?
+  resendFromName                String?
+  resendFromEmail               String?
+  // Signing secret (whsec_...) del webhook que la empresa configura en SU
+  // cuenta Resend apuntando al mismo endpoint compartido /api/webhooks/resend.
+  // Sin esto, los eventos open/click/bounce de sus envíos no verifican firma
+  // y se rechazan.
+  resendWebhookSecretEncrypted  String?
+
   campaigns     Campaign[]
   contacts      Contact[]
   surveys       Survey[]

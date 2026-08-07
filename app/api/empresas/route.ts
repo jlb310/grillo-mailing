@@ -17,7 +17,12 @@ export async function GET() {
     include: { _count: { select: { contacts: true, campaigns: true } } },
   });
 
-  return NextResponse.json(empresas);
+  // Never send encrypted secrets to the browser — booleans are enough for the UI.
+  return NextResponse.json(empresas.map(({ resendApiKeyEncrypted, resendWebhookSecretEncrypted, ...safe }) => ({
+    ...safe,
+    resendApiKeyConfigured: !!resendApiKeyEncrypted,
+    resendWebhookSecretConfigured: !!resendWebhookSecretEncrypted,
+  })));
 }
 
 export async function POST(req: Request) {
