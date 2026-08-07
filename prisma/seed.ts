@@ -15,6 +15,8 @@ async function main() {
       name: "Lenyes",
       slug: "lenyes",
       description: "Empresa piloto de Grillo Mailing",
+      resendFromName: "Lenyes",
+      resendFromEmail: "pruebas@news.lenyes.cl",
     },
   });
   console.log("✓ Empresa:", empresa.name);
