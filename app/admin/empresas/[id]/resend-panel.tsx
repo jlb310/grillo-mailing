@@ -5,13 +5,22 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Mail, Check, CheckCircle2, AlertTriangle, HelpCircle, Search } from "lucide-react";
+import { Mail, Check, CheckCircle2, AlertTriangle, HelpCircle, Search, Zap } from "lucide-react";
+
+interface DnsRecord { record: string; type: string; name: string; value: string; status: string }
 
 interface TrackingStatus {
   active: boolean;
   unknown: boolean;
   reason: string;
-  pendingTrackingRecords: { record: string; type: string; name: string; value: string; status: string }[];
+  pendingTrackingRecords: DnsRecord[];
+}
+
+interface SetupResult {
+  ok?: boolean;
+  error?: string;
+  steps?: string[];
+  pendingTrackingRecords?: DnsRecord[];
 }
 
 interface ResendPanelProps {
@@ -40,10 +49,13 @@ export default function ResendPanel({
   const [error, setError] = useState("");
   const [tracking, setTracking] = useState<TrackingStatus | null>(null);
   const [checking, setChecking] = useState(false);
+  const [setup, setSetup] = useState<SetupResult | null>(null);
+  const [settingUp, setSettingUp] = useState(false);
 
   async function checkTracking() {
     setChecking(true);
     setTracking(null);
+    setSetup(null);
     try {
       const res = await fetch(`/api/empresas/${empresaId}/tracking-status`);
       setTracking(await res.json());
@@ -51,6 +63,23 @@ export default function ResendPanel({
       setTracking({ active: false, unknown: true, reason: "No se pudo verificar el estado.", pendingTrackingRecords: [] });
     }
     setChecking(false);
+  }
+
+  async function activateTracking() {
+    if (!confirm("Esto modifica la cuenta de Resend de esta empresa: activa el seguimiento en el dominio, le asigna un subdominio de seguimiento y crea el webhook. ¿Continuar?")) return;
+    setSettingUp(true);
+    setSetup(null);
+    setTracking(null);
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/tracking-status`, { method: "POST" });
+      const data: SetupResult & { status?: TrackingStatus } = await res.json();
+      setSetup(data);
+      if (data.status) setTracking(data.status);
+    } catch {
+      setSetup({ error: "No se pudo completar la configuración." });
+    }
+    setSettingUp(false);
+    router.refresh();
   }
 
   async function save() {
@@ -162,7 +191,38 @@ export default function ResendPanel({
           <Search className="w-3.5 h-3.5 mr-1.5" />
           {checking ? "Verificando..." : "Verificar seguimiento de aperturas/clics"}
         </Button>
+        {resendApiKeyConfigured && (
+          <Button size="sm" variant="outline" className="h-8 text-xs" disabled={settingUp} onClick={activateTracking}>
+            <Zap className="w-3.5 h-3.5 mr-1.5" />
+            {settingUp ? "Configurando..." : "Activar seguimiento"}
+          </Button>
+        )}
       </div>
+
+      {setup && (
+        <div className={`text-xs rounded-md border p-2.5 space-y-1.5 ${setup.error ? "bg-red-50 border-red-200 text-red-700" : "bg-blue-50 border-blue-200 text-blue-800"}`}>
+          {setup.error ? (
+            <p>{setup.error}</p>
+          ) : (
+            <>
+              <ul className="space-y-0.5">
+                {setup.steps?.map((s, i) => <li key={i}>✓ {s}</li>)}
+              </ul>
+              {setup.pendingTrackingRecords && setup.pendingTrackingRecords.length > 0 && (
+                <div className="pt-1 border-t border-blue-200 space-y-1">
+                  <p className="font-semibold">Falta agregar estos registros en el DNS del dominio:</p>
+                  <ul className="space-y-0.5 font-mono text-[11px]">
+                    {setup.pendingTrackingRecords.map((r, i) => (
+                      <li key={i}>{r.type} {r.name} → {r.value}</li>
+                    ))}
+                  </ul>
+                  <p className="text-[11px] opacity-80">Hasta que Resend los verifique, no se miden aperturas ni clics.</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {tracking && (
         <div
