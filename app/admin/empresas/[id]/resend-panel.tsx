@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Mail, Check } from "lucide-react";
+import { Mail, Check, CheckCircle2, AlertTriangle, HelpCircle, Search } from "lucide-react";
+
+interface TrackingStatus {
+  active: boolean;
+  unknown: boolean;
+  reason: string;
+  pendingTrackingRecords: { record: string; type: string; name: string; value: string; status: string }[];
+}
 
 interface ResendPanelProps {
   empresaId: string;
@@ -31,6 +38,20 @@ export default function ResendPanel({
   const [webhookSecret, setWebhookSecret] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [tracking, setTracking] = useState<TrackingStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  async function checkTracking() {
+    setChecking(true);
+    setTracking(null);
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/tracking-status`);
+      setTracking(await res.json());
+    } catch {
+      setTracking({ active: false, unknown: true, reason: "No se pudo verificar el estado.", pendingTrackingRecords: [] });
+    }
+    setChecking(false);
+  }
 
   async function save() {
     setSaving(true);
@@ -132,10 +153,46 @@ export default function ResendPanel({
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
-      <Button size="sm" className="h-8 text-xs bg-[#207029] hover:bg-[#005f12] text-white" disabled={saving} onClick={save}>
-        <Mail className="w-3.5 h-3.5 mr-1.5" />
-        {saving ? "Guardando..." : "Guardar configuración de envío"}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button size="sm" className="h-8 text-xs bg-[#207029] hover:bg-[#005f12] text-white" disabled={saving} onClick={save}>
+          <Mail className="w-3.5 h-3.5 mr-1.5" />
+          {saving ? "Guardando..." : "Guardar configuración de envío"}
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs" disabled={checking} onClick={checkTracking}>
+          <Search className="w-3.5 h-3.5 mr-1.5" />
+          {checking ? "Verificando..." : "Verificar seguimiento de aperturas/clics"}
+        </Button>
+      </div>
+
+      {tracking && (
+        <div
+          className={`flex items-start gap-2 text-xs rounded-md border p-2.5 ${
+            tracking.unknown
+              ? "bg-gray-50 border-gray-200 text-gray-600"
+              : tracking.active
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-amber-50 border-amber-200 text-amber-800"
+          }`}
+        >
+          {tracking.unknown ? (
+            <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
+          ) : tracking.active ? (
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-500" />
+          ) : (
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
+          )}
+          <div className="space-y-1">
+            <p>{tracking.reason}</p>
+            {tracking.pendingTrackingRecords.length > 0 && (
+              <ul className="space-y-0.5 text-[11px] opacity-80">
+                {tracking.pendingTrackingRecords.map((r, i) => (
+                  <li key={i}>{r.type} {r.name} → {r.value} ({r.status})</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
