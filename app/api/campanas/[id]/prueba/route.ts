@@ -24,21 +24,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .replace(/\{\{VIEW_URL\}\}/g, viewUrl);
 
   const { resend, from } = resolveEmpresaSender(campaign.empresa);
-  const errors: string[] = [];
+  const errors: { email: string; message: string }[] = [];
+  let sent = 0;
 
   for (const email of emails) {
     try {
-      await resend.emails.send({
+      const result = await resend.emails.send({
         from,
         to: email,
         subject: `[PRUEBA] ${campaign.subject}`,
         html,
       });
+      if (result.data?.id) {
+        sent++;
+      } else {
+        const message = result.error?.message ?? "Resend rechazó el envío";
+        errors.push({ email, message });
+        console.error("Test send rejected by Resend for", email, result.error);
+      }
     } catch (err) {
-      errors.push(email);
+      const message = err instanceof Error ? err.message : "Error de red";
+      errors.push({ email, message });
       console.error("Test send failed for", email, err);
     }
   }
 
-  return NextResponse.json({ sent: emails.length - errors.length, errors });
+  return NextResponse.json({ sent, errors });
 }

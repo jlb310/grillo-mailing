@@ -120,8 +120,15 @@ export default function CampanaDetailPage() {
         body: JSON.stringify({ emails }),
       });
       const data = await res.json();
-      if (!res.ok) setMsg(`Error: ${data.error}`);
-      else { setMsg(`✅ Prueba enviada a ${data.sent} dirección${data.sent !== 1 ? "es" : ""}`); setShowTest(false); }
+      if (!res.ok) {
+        setMsg(`Error: ${data.error}`);
+      } else if (data.errors?.length) {
+        const detail = data.errors.map((e: { email: string; message: string }) => `${e.email}: ${e.message}`).join(" · ");
+        setMsg(`⚠️ ${data.sent} enviada${data.sent !== 1 ? "s" : ""}, ${data.errors.length} rechazada${data.errors.length !== 1 ? "s" : ""} — ${detail}`);
+      } else {
+        setMsg(`✅ Prueba enviada a ${data.sent} dirección${data.sent !== 1 ? "es" : ""}`);
+        setShowTest(false);
+      }
     } catch { setMsg("Error al enviar prueba"); }
     setTestSending(false);
   }
