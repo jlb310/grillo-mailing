@@ -47,16 +47,6 @@ async function main() {
     console.log(`Super admin creado: ${superEmail}`);
   }
 
-  // --- Remitente de Lenyes (solo si aún no está configurado, no pisa lo que
-  // se haya guardado a mano desde el panel de la empresa) ---
-  const LENYES_FROM_NAME = process.env.LENYES_FROM_NAME || "Lenyes";
-  const LENYES_FROM_EMAIL = process.env.LENYES_FROM_EMAIL || "pruebas@news.lenyes.cl";
-  await client.query(
-    'UPDATE "Empresa" SET "resendFromName" = COALESCE("resendFromName", $1), "resendFromEmail" = COALESCE("resendFromEmail", $2), "updatedAt" = NOW() WHERE id = $3',
-    [LENYES_FROM_NAME, LENYES_FROM_EMAIL, empresaId]
-  );
-  console.log(`Remitente Lenyes asegurado (solo si estaba vacío): ${LENYES_FROM_NAME} <${LENYES_FROM_EMAIL}>`);
-
   // --- Admin de Lenyes (opcional, por env) ---
   const lenyesEmail = process.env.LENYES_ADMIN_EMAIL;
   if (lenyesEmail) {
