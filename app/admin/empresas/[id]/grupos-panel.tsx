@@ -24,6 +24,7 @@ export default function GruposPanel({ empresaId, groups, totalContacts, ungroupe
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [importingGroup, setImportingGroup] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   async function crearGrupo() {
@@ -47,18 +48,29 @@ export default function GruposPanel({ empresaId, groups, totalContacts, ungroupe
   }
 
   async function importarCSV(groupId: string, file: File) {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(`/api/empresas/${empresaId}/grupos/${groupId}/contactos`, {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    alert(
-      `Importados: ${data.imported} contactos` +
-        (data.invalid ? ` · ${data.invalid} inválidos descartados` : "")
-    );
-    router.refresh();
+    setImportingGroup(groupId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/empresas/${empresaId}/grupos/${groupId}/contactos`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(
+          `Importados: ${data.imported} contactos` +
+            (data.invalid ? ` · ${data.invalid} inválidos descartados` : "")
+        );
+        router.refresh();
+      } else {
+        alert(data.error ?? "Error al importar");
+      }
+    } catch {
+      alert("Error al importar: no se pudo conectar con el servidor.");
+    } finally {
+      setImportingGroup(null);
+    }
   }
 
   return (
@@ -130,9 +142,10 @@ export default function GruposPanel({ empresaId, groups, totalContacts, ungroupe
                   size="sm"
                   variant="ghost"
                   className="h-7 text-xs text-gray-600"
+                  disabled={importingGroup === g.id}
                   onClick={() => fileRefs.current[g.id]?.click()}
                 >
-                  <Upload className="w-3 h-3 mr-1" /> CSV
+                  <Upload className="w-3 h-3 mr-1" /> {importingGroup === g.id ? "Subiendo..." : "CSV"}
                 </Button>
                 <Button
                   size="sm"

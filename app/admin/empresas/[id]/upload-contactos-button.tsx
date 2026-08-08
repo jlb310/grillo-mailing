@@ -14,24 +14,29 @@ export default function UploadContactosButton({ empresaId }: { empresaId: string
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch(`/api/empresas/${empresaId}/contactos`, {
-      method: "POST",
-      body: form,
-    });
-    const data = await res.json();
-    setUploading(false);
-    if (res.ok) {
-      const parts = [`${data.imported} contactos importados`];
-      if (data.duplicates) parts.push(`${data.duplicates} duplicados omitidos`);
-      if (data.invalid) parts.push(`${data.invalid} inválidos descartados`);
-      alert(parts.join(" · "));
-      router.refresh();
-    } else {
-      alert(data.error ?? "Error al importar");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/empresas/${empresaId}/contactos`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const parts = [`${data.imported} contactos importados`];
+        if (data.duplicates) parts.push(`${data.duplicates} duplicados omitidos`);
+        if (data.invalid) parts.push(`${data.invalid} inválidos descartados`);
+        alert(parts.join(" · "));
+        router.refresh();
+      } else {
+        alert(data.error ?? "Error al importar");
+      }
+    } catch {
+      alert("Error al importar: no se pudo conectar con el servidor.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
-    if (inputRef.current) inputRef.current.value = "";
   }
 
   return (

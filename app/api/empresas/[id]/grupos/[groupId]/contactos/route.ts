@@ -48,7 +48,12 @@ export async function POST(
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { contacts: parsed, invalid } = parseContacts(buffer, file.name);
+  let parsed, invalid;
+  try {
+    ({ contacts: parsed, invalid } = parseContacts(buffer, file.name));
+  } catch {
+    return NextResponse.json({ error: "No se pudo leer el archivo. Revisa que sea un CSV o Excel válido." }, { status: 400 });
+  }
 
   // Upsert contacts into the empresa, then connect to group
   const results = await Promise.all(

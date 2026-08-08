@@ -46,7 +46,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { contacts, invalid } = parseContacts(buffer, file.name);
+  let contacts, invalid;
+  try {
+    ({ contacts, invalid } = parseContacts(buffer, file.name));
+  } catch {
+    return NextResponse.json({ error: "No se pudo leer el archivo. Revisa que sea un CSV o Excel válido." }, { status: 400 });
+  }
 
   const result = await prisma.contact.createMany({
     data: contacts.map((c) => ({ empresaId, email: c.email, name: c.name })),
