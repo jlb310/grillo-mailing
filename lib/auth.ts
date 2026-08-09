@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { isLoginThrottled, recordLoginFailure, clearLoginFailures } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -33,18 +34,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const emailKey = credentials.email.toString().toLowerCase().trim();
+        const { throttled, retryAfterMs } = isLoginThrottled(emailKey);
+        if (throttled) {
+          console.warn(`[auth] Login attempt for ${emailKey} rejected: throttled${retryAfterMs ? ` (retry in ${Math.ceil(retryAfterMs / 1000)}s)` : ""}`);
+          return null;
+        }
+
         const user = await prisma.adminUser.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!user) return null;
+        if (!user) {
+          recordLoginFailure(emailKey);
+          return null;
+        }
 
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.password
         );
 
-        if (!valid) return null;
+        if (!valid) {
+          recordLoginFailure(emailKey);
+          return null;
+        }
+
+        clearLoginFailures(emailKey);
 
         return {
           id: user.id,

@@ -17,7 +17,7 @@ function getKey(): Buffer {
 // Output format: base64(iv) + "." + base64(authTag) + "." + base64(ciphertext)
 export function encrypt(plaintext: string): string {
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv("aes-256-gcm", getKey(), iv);
+  const cipher = createCipheriv("aes-256-gcm", getKey(), iv, { authTagLength: 16 });
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
   return `${iv.toString("base64")}.${authTag.toString("base64")}.${ciphertext.toString("base64")}`;
@@ -26,7 +26,11 @@ export function encrypt(plaintext: string): string {
 export function decrypt(encoded: string): string {
   const [ivB64, authTagB64, ciphertextB64] = encoded.split(".");
   if (!ivB64 || !authTagB64 || !ciphertextB64) throw new Error("Valor cifrado con formato inválido");
-  const decipher = createDecipheriv("aes-256-gcm", getKey(), Buffer.from(ivB64, "base64"));
+  // Pin the GCM tag to the full 16 bytes instead of trusting the stored tag
+  // length: a truncated (shorter) tag would otherwise verify only a few bytes
+  // and let an attacker forge ciphertexts. All values written by encrypt() use
+  // the default 16-byte tag, so this is backward-compatible with existing data.
+  const decipher = createDecipheriv("aes-256-gcm", getKey(), Buffer.from(ivB64, "base64"), { authTagLength: 16 });
   decipher.setAuthTag(Buffer.from(authTagB64, "base64"));
   const plaintext = Buffer.concat([
     decipher.update(Buffer.from(ciphertextB64, "base64")),

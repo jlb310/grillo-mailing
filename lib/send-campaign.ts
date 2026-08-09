@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getResend, FROM, REPORT_RECIPIENTS, resolveEmpresaSender } from "@/lib/resend";
 import { getTrackingStatus } from "@/lib/resend-status";
 import { BASE_URL } from "@/lib/base-url";
+import { encrypt } from "@/lib/crypto";
 
 const BATCH_SIZE = 100;
 const BATCH_DELAY_MS = 5 * 60 * 1000;
@@ -177,7 +178,9 @@ export async function runSend(campaignId: string) {
           return null;
         }
         const html = campaign.htmlBody
-          .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, `${BASE_URL}/api/unsubscribe?token=${log.id}`)
+          // Signed (encrypted) sendLog id so the token can't be forged for a
+          // different recipient: it only ever points back at its own send.
+          .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, `${BASE_URL}/api/unsubscribe?token=${encodeURIComponent(encrypt(log.id))}`)
           .replace(/\{\{VIEW_URL\}\}/g, viewUrl);
         return { to: c.email, name: c.name, logId: log.id, html };
       })
