@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { decrypt } from "@/lib/crypto";
+import { senderAddress } from "@/lib/sender";
 
 let _resend: Resend | null = null;
 
@@ -11,7 +12,7 @@ export function getResend(): Resend {
   return _resend;
 }
 
-export const FROM = () => process.env.RESEND_FROM ?? "Grillo <no-reply@grillo.click>";
+export const FROM = () => senderAddress();
 
 // Recipients for the ops report emails (Envío completado / Estadísticas 24h)
 // when a campaign has no notifyEmails set. Without this, a campaign created

@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { getResend } from "@/lib/resend";
 import { BASE_URL } from "@/lib/base-url";
+import { senderAddress, domainFromSender } from "@/lib/sender";
 
 // Read-only diagnosis of whether Resend is actually capturing open/click events.
 // Mirrors the checks in scripts/setup-resend-tracking.ts but never mutates
@@ -62,9 +63,10 @@ function webhookUrl(): string {
 }
 
 function sendingDomain(fromEmail?: string): string | null {
-  const from = fromEmail ?? process.env.RESEND_FROM ?? "";
-  const m = from.match(/@([^\s>]+)/);
-  return m ? m[1].toLowerCase() : null;
+  // The empresa's OWN domain wins; only fall back to the shared Grillo sender
+  // (RESEND_FROM / DEFAULT_FROM) when no empresa-specific email was provided.
+  const from = fromEmail ?? senderAddress();
+  return domainFromSender(from);
 }
 
 function unknownStatus(reason: string, fromEmail?: string, svixSet = !!process.env.SVIX_SECRET): TrackingStatus {
@@ -101,6 +103,29 @@ export async function getTrackingStatus(overrides: TrackingStatusOverrides = {})
 
   if (!apiKey) {
     return unknownStatus("No se pudo verificar: falta RESEND_API_KEY en el entorno.", overrides.fromEmail, svixSet);
+  }
+
+  // An empresa with its OWN Resend account is diagnosed against its own domain,
+  // never the shared Grillo one. If its sender email is missing from the record,
+  // say so instead of silently falling back to RESEND_FROM and reporting the
+  // wrong (shared) domain.
+  if (overrides.apiKey && !overrides.fromEmail) {
+    return {
+      active: false,
+      domainName: null,
+      domainFound: false,
+      domainOpenTracking: false,
+      domainClickTracking: false,
+      trackingSubdomain: null,
+      trackingDnsVerified: false,
+      pendingTrackingRecords: [],
+      webhookConfigured: false,
+      webhookEnabled: false,
+      webhookMissingEvents: [...REQUIRED_OPEN_CLICK],
+      svixSet,
+      reason: "Esta empresa tiene su propia cuenta Resend pero falta el email del remitente (resendFromEmail) para determinar su dominio de seguimiento.",
+      unknown: false,
+    };
   }
 
   const domainName = sendingDomain(overrides.fromEmail);
@@ -161,7 +186,7 @@ export async function getTrackingStatus(overrides: TrackingStatusOverrides = {})
     // Build the most relevant reason (first failing check).
     let reason = "El seguimiento de aperturas y clicks está activo.";
     if (!domainName) {
-      reason = "No se pudo determinar el dominio de envío desde RESEND_FROM.";
+      reason = "No se pudo determinar el dominio de envío del remitente.";
     } else if (!domainFound) {
       reason = `El dominio "${domainName}" no está verificado en la cuenta de Resend.`;
     } else if (!domainOpenTracking || !domainClickTracking) {

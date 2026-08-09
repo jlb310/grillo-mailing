@@ -113,7 +113,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // ── Webhook: create if missing, then sync its signing secret into the app ──
   const endpoint = `${BASE_URL}/api/webhooks/resend`;
   const whList = await resend.webhooks.list();
-  let ours = (whList.data?.data ?? []).find((w) => w.endpoint === endpoint);
+  const ours = (whList.data?.data ?? []).find((w) => w.endpoint === endpoint);
 
   let signingSecret: string | undefined;
   if (!ours) {

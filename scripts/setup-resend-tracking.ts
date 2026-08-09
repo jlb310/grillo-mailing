@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { senderAddress, domainFromSender } from "../lib/sender";
 
 // Idempotent Resend configuration for open/click tracking.
 //
@@ -17,13 +18,6 @@ import { Resend } from "resend";
 
 const LOG = "[setup-resend-tracking]";
 
-function sendingDomain(): string | null {
-  // RESEND_FROM looks like: "Clínica Alemana <eventos@clinicaalemana.cl>"
-  const from = process.env.RESEND_FROM ?? "";
-  const m = from.match(/@([^\s>]+)/);
-  return m ? m[1].toLowerCase() : null;
-}
-
 function webhookUrl(): string {
   const base = process.env.NEXTAUTH_URL ?? "https://calemana.digitalsagencia.cl";
   return `${base.replace(/\/$/, "")}/api/webhooks/resend`;
@@ -40,9 +34,9 @@ async function main() {
   const resend = new Resend(apiKey);
 
   // ── 1. Domain open/click tracking ──────────────────────────────────────────
-  const domainName = sendingDomain();
+  const domainName = domainFromSender(senderAddress());
   if (!domainName) {
-    console.log(`${LOG} Could not parse a domain from RESEND_FROM ("${process.env.RESEND_FROM ?? ""}"). Skipping domain step.`);
+    console.log(`${LOG} Could not parse a domain from the shared sender ("${senderAddress()}"). Skipping domain step.`);
   } else {
     const list = await resend.domains.list();
     const domains = list.data?.data ?? [];

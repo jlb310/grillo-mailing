@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { getTrackingStatus } from "@/lib/resend-status";
+import { decrypt } from "@/lib/crypto";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
 import { scopeWhere } from "@/lib/empresa";
@@ -29,19 +30,34 @@ function NoTracking() {
 }
 
 export default async function MetricasPage() {
-  const [campaigns, tracking] = await Promise.all([
-    prisma.campaign.findMany({
-      where: { status: "SENT", ...(await scopeWhere()) },
-      orderBy: { sentAt: "desc" },
-      include: {
-        empresa: { select: { name: true } },
-        sendLogs: {
-          select: { openedAt: true, clickedAt: true, bouncedAt: true, contact: { select: { unsubscribed: true } } },
-        },
+  const campaigns = await prisma.campaign.findMany({
+    where: { status: "SENT", ...(await scopeWhere()) },
+    orderBy: { sentAt: "desc" },
+    include: {
+      empresa: { select: { id: true, name: true, resendApiKeyEncrypted: true, resendFromEmail: true, resendWebhookSecretEncrypted: true } },
+      sendLogs: {
+        select: { openedAt: true, clickedAt: true, bouncedAt: true, contact: { select: { unsubscribed: true } } },
       },
-    }),
-    getTrackingStatus(),
-  ]);
+    },
+  });
+
+  // Diagnose the tracking of the account/domain each empresa ACTUALLY sends
+  // with (own Resend account first, shared Grillo fallback), mirroring the
+  // sender resolution in lib/send-campaign.ts — never a single global check,
+  // which would blame every empresa for the shared account's state.
+  const statuses = await Promise.all(
+    Array.from(new Map(campaigns.map((c) => [c.empresa.id, c.empresa])).values()).map(async (emp) => {
+      const overrides = emp.resendApiKeyEncrypted
+        ? {
+            apiKey: decrypt(emp.resendApiKeyEncrypted),
+            fromEmail: emp.resendFromEmail ?? undefined,
+            webhookSecretSet: !!emp.resendWebhookSecretEncrypted,
+          }
+        : {};
+      const status = await getTrackingStatus(overrides).catch(() => null);
+      return { id: emp.id, name: emp.name, status };
+    })
+  );
 
   const globalTotal   = campaigns.reduce((s, c) => s + c.sendLogs.length, 0);
   const globalBounces = campaigns.reduce((s, c) => s + c.sendLogs.filter(l => l.bouncedAt).length, 0);
@@ -57,16 +73,31 @@ export default async function MetricasPage() {
   const pct  = (n: number, base: number) => base > 0 ? Math.round((n / base) * 100) : 0;
   const hasTracked = trackedTotal > 0;
 
-  // Banner styling by tracking state.
-  const banner = tracking.unknown
-    ? { icon: HelpCircle, cls: "bg-gray-50 border-gray-200 text-gray-600", iconCls: "text-gray-400",
-        title: "Estado de seguimiento no verificado" }
-    : tracking.active
-    ? { icon: CheckCircle2, cls: "bg-emerald-50 border-emerald-200 text-emerald-800", iconCls: "text-emerald-500",
-        title: "Seguimiento de aperturas y clics activo" }
-    : { icon: AlertTriangle, cls: "bg-amber-50 border-amber-200 text-amber-800", iconCls: "text-amber-500",
-        title: "Seguimiento de aperturas y clics inactivo" };
+  // Banner from the per-empresa statuses: green only when every empresa's own
+  // domain is tracking; amber when any is inactive; gray when any is unverified.
+  const untracked = statuses.filter((s) => s.status && !s.status.active);
+  const notVerified = statuses.filter((s) => !s.status || s.status.unknown);
+  const allActive = statuses.length > 0 && untracked.length === 0 && notVerified.length === 0;
+
+  const banner =
+    notVerified.length > 0 && untracked.length === 0
+      ? { icon: HelpCircle, cls: "bg-gray-50 border-gray-200 text-gray-600", iconCls: "text-gray-400",
+          title: "Estado de seguimiento no verificado" }
+      : allActive
+      ? { icon: CheckCircle2, cls: "bg-emerald-50 border-emerald-200 text-emerald-800", iconCls: "text-emerald-500",
+          title: "Seguimiento de aperturas y clics activo en todas las empresas" }
+      : { icon: AlertTriangle, cls: "bg-amber-50 border-amber-200 text-amber-800", iconCls: "text-amber-500",
+          title: `Seguimiento de aperturas y clics inactivo en ${untracked.length} de ${statuses.length} empresas` };
   const BannerIcon = banner.icon;
+
+  const trackingDetails = statuses
+    .map((s) => {
+      const st = s.status;
+      const domain = st?.domainName ? ` (${st.domainName})` : "";
+      const state = st?.active ? "activo" : !st || st.unknown ? "no verificado" : "inactivo";
+      return `${s.name}${domain}: ${state}`;
+    })
+    .join(" · ");
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
@@ -82,20 +113,23 @@ export default async function MetricasPage() {
         </div>
       </div>
 
-      {/* Tracking status banner */}
-      <div className={`rounded-2xl border p-4 flex items-start gap-3 ${banner.cls}`}>
-        <BannerIcon className={`w-5 h-5 mt-0.5 shrink-0 ${banner.iconCls}`} />
-        <div className="text-sm">
-          <p className="font-semibold">{banner.title}</p>
-          <p className="opacity-90 mt-0.5">{tracking.reason}</p>
-          {!tracking.active && !tracking.unknown && (
-            <p className="opacity-75 mt-1 text-xs">
-              Mientras esté inactivo, las aperturas y clics aparecen como “Sin seguimiento”: no significa que nadie
-              haya abierto, sino que esos eventos no se están registrando. Los rebotes y las bajas sí son datos reales.
-            </p>
-          )}
+      {/* Tracking status banner — per-empresa domains, not a single global check */}
+      {statuses.length > 0 && (
+        <div className={`rounded-2xl border p-4 flex items-start gap-3 ${banner.cls}`}>
+          <BannerIcon className={`w-5 h-5 mt-0.5 shrink-0 ${banner.iconCls}`} />
+          <div className="text-sm">
+            <p className="font-semibold">{banner.title}</p>
+            <p className="opacity-90 mt-0.5">{trackingDetails}</p>
+            {!allActive && (
+              <p className="opacity-75 mt-1 text-xs">
+                Mientras esté inactivo en una empresa, sus aperturas y clics aparecen como “Sin seguimiento”: no
+                significa que nadie haya abierto, sino que esos eventos no se están registrando. Los rebotes y las
+                bajas sí son datos reales.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Global KPIs */}
       <div className="grid grid-cols-5 gap-3">
