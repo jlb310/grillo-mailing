@@ -21,9 +21,7 @@ services:
       - LENYES_ADMIN_EMAIL=${LENYES_ADMIN_EMAIL}
       - LENYES_ADMIN_PASSWORD=${LENYES_ADMIN_PASSWORD}
       - LENYES_ADMIN_NAME=${LENYES_ADMIN_NAME}
-      - CERTIFICATES_PATH=/app/public/certificates
     volumes:
-      - certificates:/app/public/certificates
       # Uploads locales (logos, programas) viven en /app/public y se sirven
       # públicamente por la app; los volúmenes evitan que se pierdan al redeploy.
       # Nombres *_data: al ser nuevos, Docker los crea heredando el ownership
@@ -43,7 +41,6 @@ networks:
     external: true
 
 volumes:
-  certificates:
   logos_data:
   programas_data:
   uploads_data:

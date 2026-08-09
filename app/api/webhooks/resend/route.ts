@@ -81,22 +81,9 @@ export async function POST(req: Request) {
     include: { campaign: { select: { empresaId: true, empresa: { select: { resendWebhookSecretEncrypted: true } } } } },
   });
   if (!log) {
-    // Not a campaign send — it may be a certificate email. Certificates aren't
-    // tenant-scoped and always send via the shared Grillo account, so only the
-    // shared secret may authenticate their events.
-    if (signedByEmpresaId !== null) {
-      console.warn(`${LOG} ${payload.type} for resendId=${resendId} signed by empresa ${signedByEmpresaId}'s secret but no matching SendLog — refusing to check it against Certificate too (cross-tenant forgery attempt?).`);
-      return NextResponse.json({ ok: true });
-    }
-    const cert = await prisma.certificate.findFirst({ where: { resendId } });
-    if (cert) {
-      if (payload.type === "email.opened" && !cert.openedAt) {
-        await prisma.certificate.update({ where: { id: cert.id }, data: { openedAt: new Date() } });
-      }
-      console.log(`${LOG} ${payload.type} matched Certificate ${cert.id} (batch ${cert.batchId}).`);
-      return NextResponse.json({ ok: true });
-    }
-    console.warn(`${LOG} ${payload.type} received but no SendLog/Certificate matched resendId=${resendId}.`);
+    // No campaign send matched this resendId. There are no other sender types
+    // (certificates were removed), so there is nothing tenant-scoped to update.
+    console.warn(`${LOG} ${payload.type} received but no SendLog matched resendId=${resendId}.`);
     return NextResponse.json({ ok: true });
   }
 

@@ -20,11 +20,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Chromium + libs for puppeteer-core (certificate PDF generation). Alpine's own
-# chromium build runs on musl — unlike @sparticuz/chromium, whose glibc binary
-# cannot execute here. lib/pdf.ts points puppeteer-core at the installed binary.
-RUN apk add --no-cache openssl \
-    chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto
+RUN apk add --no-cache openssl
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -45,8 +41,8 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib/email-builder.ts ./lib/email-builder.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
-RUN mkdir -p /app/public/certificates /app/public/logos /app/public/programas /app/public/uploads /app/public/productos \
-    && chown -R nextjs:nodejs /app/public/certificates /app/public/logos /app/public/programas /app/public/uploads /app/public/productos
+RUN mkdir -p /app/public/logos /app/public/programas /app/public/uploads /app/public/productos \
+    && chown -R nextjs:nodejs /app/public/logos /app/public/programas /app/public/uploads /app/public/productos
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
