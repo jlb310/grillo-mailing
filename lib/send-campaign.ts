@@ -44,11 +44,24 @@ type SingleResult = "sent" | "invalid" | "ratelimit" | "quota";
 // Send one email, classifying the outcome instead of treating every failure as a
 // bad address. 429/rate_limit is transient (back off and retry); daily quota stops
 // the run; only a genuine rejection (e.g. 422) counts as an invalid address.
+// Gmail y Yahoo exigen la baja en un clic a los remitentes masivos desde 2024.
+// Sin estas cabeceras el único camino de salida es el link dentro del cuerpo, y
+// quien no lo encuentra marca el correo como spam — justo la métrica que hunde
+// la reputación del dominio. List-Unsubscribe-Post hace que el cliente de correo
+// llame al endpoint por POST (nunca GET, para que ningún escáner de links dé de
+// baja a nadie sin querer), por eso /api/unsubscribe implementa ambos verbos.
+function unsubscribeHeaders(url: string): Record<string, string> {
+  return {
+    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
 async function sendOne(
   resend: ReturnType<typeof getResend>,
   from: string,
   subject: string,
-  e: { to: string; name: string; logId: string; html: string }
+  e: { to: string; name: string; logId: string; html: string; unsubUrl: string }
 ): Promise<SingleResult> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const single = await resend.emails.send({
@@ -56,6 +69,7 @@ async function sendOne(
       to: [toAddress(e.name, e.to)],
       subject,
       html: e.html,
+      headers: unsubscribeHeaders(e.unsubUrl),
     });
 
     if (single.data?.id) {
@@ -177,14 +191,16 @@ export async function runSend(campaignId: string) {
           skippedCount++;
           return null;
         }
+        // Signed (encrypted) sendLog id so the token can't be forged for a
+        // different recipient: it only ever points back at its own send. The
+        // same URL feeds the body link and the List-Unsubscribe header.
+        const unsubUrl = `${BASE_URL}/api/unsubscribe?token=${encodeURIComponent(encrypt(log.id))}`;
         const html = campaign.htmlBody
-          // Signed (encrypted) sendLog id so the token can't be forged for a
-          // different recipient: it only ever points back at its own send.
-          .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, `${BASE_URL}/api/unsubscribe?token=${encodeURIComponent(encrypt(log.id))}`)
+          .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubUrl)
           .replace(/\{\{VIEW_URL\}\}/g, viewUrl);
-        return { to: c.email, name: c.name, logId: log.id, html };
+        return { to: c.email, name: c.name, logId: log.id, html, unsubUrl };
       })
-      .filter(Boolean) as { to: string; name: string; logId: string; html: string }[];
+      .filter(Boolean) as { to: string; name: string; logId: string; html: string; unsubUrl: string }[];
 
     const resend = sender.resend;
     const batches = chunk(emails, BATCH_SIZE);
@@ -218,6 +234,7 @@ export async function runSend(campaignId: string) {
           to: [toAddress(e.name, e.to)],
           subject: campaign.subject,
           html: e.html,
+          headers: unsubscribeHeaders(e.unsubUrl),
         }))
       );
 
