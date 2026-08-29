@@ -11,6 +11,12 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      # Signing secret del webhook de la cuenta Resend de Grillo. Sin esto en la
+      # lista, la variable puede estar en Dokploy y NUNCA llegar al contenedor:
+      # el webhook responde 400 y no se registra ninguna apertura ni clic de las
+      # empresas que envían por la cuenta compartida. Las que tienen cuenta
+      # propia no dependen de él (su secreto va cifrado en la base).
+      - SVIX_SECRET=${SVIX_SECRET}
       # Cifra las credenciales de Resend que cada cliente pega en la app.
       # Si se pierde o se cambia, hay que volver a pegarlas todas.
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
