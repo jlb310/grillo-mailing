@@ -66,7 +66,8 @@ export default function ResendPanel({
   }
 
   async function activateTracking() {
-    if (!confirm("Esto modifica la cuenta de Resend de esta empresa: activa el seguimiento en el dominio, le asigna un subdominio de seguimiento y crea el webhook. ¿Continuar?")) return;
+    const cuenta = resendApiKeyConfigured ? "la cuenta de Resend propia de esta empresa" : "la cuenta de Resend de Grillo";
+    if (!confirm(`Esto modifica ${cuenta}: activa el seguimiento en el dominio ${resendFromEmail ?? ""} y le asigna un subdominio de seguimiento. ¿Continuar?`)) return;
     setSettingUp(true);
     setSetup(null);
     setTracking(null);
@@ -121,7 +122,7 @@ export default function ResendPanel({
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400">
-        Cuando están configuradas, las campañas de esta empresa se envían desde su propio dominio con su propia cuenta Resend en vez de la cuenta de Grillo.
+        Con solo indicar el remitente, las campañas salen desde el dominio de esta empresa usando la cuenta de Resend de Grillo (el dominio debe estar verificado ahí, con sus registros DNS en la zona del cliente). La API key de abajo es opcional: solo para empresas que pagan su propia cuenta de Resend.
       </p>
 
       <div className="grid grid-cols-2 gap-2">
@@ -137,7 +138,7 @@ export default function ResendPanel({
 
       <div className="space-y-1">
         <Label className="text-xs text-gray-500 flex items-center gap-1.5">
-          API Key de Resend
+          API Key de Resend <span className="text-gray-400 font-normal">(opcional — solo si la empresa paga su propia cuenta)</span>
           {resendApiKeyConfigured && <span className="inline-flex items-center gap-0.5 text-[#207029]"><Check className="w-3 h-3" /> configurada</span>}
         </Label>
         <div className="flex gap-2">
@@ -162,7 +163,7 @@ export default function ResendPanel({
           {resendWebhookSecretConfigured && <span className="inline-flex items-center gap-0.5 text-[#207029]"><Check className="w-3 h-3" /> configurado</span>}
         </Label>
         <p className="text-[11px] text-gray-400">
-          En la cuenta Resend de la empresa, crear un webhook a <code className="bg-gray-50 px-1 rounded">/api/webhooks/resend</code> (eventos: email.opened, email.clicked, email.bounced) y pegar aquí el secreto que entrega.
+          Solo para empresas con cuenta propia: en SU cuenta Resend, crear un webhook a <code className="bg-gray-50 px-1 rounded">/api/webhooks/resend</code> (eventos: email.opened, email.clicked, email.bounced) y pegar aquí el secreto que entrega. Con la cuenta de Grillo el webhook es compartido y su secreto vive en el entorno (SVIX_SECRET).
         </p>
         <div className="flex gap-2">
           <Input
@@ -191,7 +192,7 @@ export default function ResendPanel({
           <Search className="w-3.5 h-3.5 mr-1.5" />
           {checking ? "Verificando..." : "Verificar seguimiento de aperturas/clics"}
         </Button>
-        {resendApiKeyConfigured && (
+        {resendFromEmail && (
           <Button size="sm" variant="outline" className="h-8 text-xs" disabled={settingUp} onClick={activateTracking}>
             <Zap className="w-3.5 h-3.5 mr-1.5" />
             {settingUp ? "Configurando..." : "Activar seguimiento"}

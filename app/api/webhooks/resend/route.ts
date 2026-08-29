@@ -11,8 +11,10 @@ interface CandidateSecret {
   empresaId: string | null;
 }
 
-// Every empresa's own Resend account can point its webhook at this same
-// shared endpoint, but each one signs with a DIFFERENT secret (its own
+// The target model is ONE shared Grillo Resend account holding every client's
+// verified domain, so its single SVIX_SECRET signs everything. But clients not
+// migrated yet still send from their OWN Resend account, pointing their webhook
+// at this same shared endpoint and signing with a DIFFERENT secret (their own
 // account's signing secret, not the shared SVIX_SECRET). There is no header
 // telling us which empresa sent this, so verification tries every known
 // secret (shared + each empresa's own) until one validates — but WHICH one
@@ -89,7 +91,9 @@ export async function POST(req: Request) {
 
   // Bind the secret that validated this payload to the tenant it may mutate:
   // an empresa's own secret only authenticates its own campaigns; the shared
-  // secret only authenticates campaigns from empresas with no account of their own.
+  // secret only authenticates campaigns from empresas with no account of their
+  // own — which, under the shared-account model, is the normal case (they send
+  // from their own domain, but Grillo's account and secret sign the events).
   const ownerEmpresaId = log.campaign.empresaId;
   const authorized = signedByEmpresaId === null
     ? !log.campaign.empresa.resendWebhookSecretEncrypted

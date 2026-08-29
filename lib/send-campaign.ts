@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getResend, FROM, REPORT_RECIPIENTS, resolveEmpresaSender } from "@/lib/resend";
+import { getResend, FROM, REPORT_RECIPIENTS, resolveEmpresaSender, trackingOverridesFor } from "@/lib/resend";
 import { getTrackingStatus } from "@/lib/resend-status";
 import { BASE_URL } from "@/lib/base-url";
 import { encrypt } from "@/lib/crypto";
@@ -123,8 +123,8 @@ export async function runSend(campaignId: string) {
     });
     if (!campaign) return;
 
-    // Own Resend account/domain when the empresa has one configured, else the
-    // shared Grillo account — this is what actually sends to real recipients.
+    // Which account pays and which domain signs are resolved independently: an
+    // empresa may send from its own domain through the shared Grillo account.
     const sender = resolveEmpresaSender(campaign.empresa);
 
     // Snapshot whether Resend open/click tracking is active at send time, so the
@@ -132,7 +132,7 @@ export async function runSend(campaignId: string) {
     // real" per campaign. Diagnose whichever account is actually sending. Never
     // let a diagnosis failure block the actual send.
     const tracking = await getTrackingStatus(
-      sender.apiKey ? { apiKey: sender.apiKey, fromEmail: sender.from, webhookSecretSet: !!campaign.empresa.resendWebhookSecretEncrypted } : {}
+      trackingOverridesFor(sender, !!campaign.empresa.resendWebhookSecretEncrypted)
     ).catch(() => null);
     const trackingData = {
       openTrackingAtSend: tracking ? tracking.active && tracking.domainOpenTracking : false,

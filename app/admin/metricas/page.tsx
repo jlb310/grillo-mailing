@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { getTrackingStatus } from "@/lib/resend-status";
-import { decrypt } from "@/lib/crypto";
+import { resolveEmpresaSender, trackingOverridesFor } from "@/lib/resend";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
 import { scopeWhere } from "@/lib/empresa";
@@ -34,27 +34,24 @@ export default async function MetricasPage() {
     where: { status: "SENT", ...(await scopeWhere()) },
     orderBy: { sentAt: "desc" },
     include: {
-      empresa: { select: { id: true, name: true, resendApiKeyEncrypted: true, resendFromEmail: true, resendWebhookSecretEncrypted: true } },
+      empresa: { select: { id: true, name: true, resendApiKeyEncrypted: true, resendFromName: true, resendFromEmail: true, resendWebhookSecretEncrypted: true } },
       sendLogs: {
         select: { openedAt: true, clickedAt: true, bouncedAt: true, contact: { select: { unsubscribed: true } } },
       },
     },
   });
 
-  // Diagnose the tracking of the account/domain each empresa ACTUALLY sends
-  // with (own Resend account first, shared Grillo fallback), mirroring the
-  // sender resolution in lib/send-campaign.ts — never a single global check,
-  // which would blame every empresa for the shared account's state.
+  // Diagnose the tracking of the account AND domain each empresa ACTUALLY sends
+  // with, mirroring the sender resolution in lib/send-campaign.ts — never a
+  // single global check, which would blame every empresa for the shared
+  // account's state, and never the shared domain for an empresa that sends
+  // from its own through the shared account.
   const statuses = await Promise.all(
     Array.from(new Map(campaigns.map((c) => [c.empresa.id, c.empresa])).values()).map(async (emp) => {
-      const overrides = emp.resendApiKeyEncrypted
-        ? {
-            apiKey: decrypt(emp.resendApiKeyEncrypted),
-            fromEmail: emp.resendFromEmail ?? undefined,
-            webhookSecretSet: !!emp.resendWebhookSecretEncrypted,
-          }
-        : {};
-      const status = await getTrackingStatus(overrides).catch(() => null);
+      const sender = resolveEmpresaSender(emp);
+      const status = await getTrackingStatus(
+        trackingOverridesFor(sender, !!emp.resendWebhookSecretEncrypted)
+      ).catch(() => null);
       return { id: emp.id, name: emp.name, status };
     })
   );
