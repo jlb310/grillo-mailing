@@ -5,9 +5,21 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Mail, Check, CheckCircle2, AlertTriangle, HelpCircle, Search, Zap } from "lucide-react";
+import { Mail, Check, CheckCircle2, AlertTriangle, HelpCircle, Search, Zap, Globe, Plus, RefreshCw, Copy } from "lucide-react";
 
-interface DnsRecord { record: string; type: string; name: string; value: string; status: string }
+interface DnsRecord { record: string; type: string; name: string; value: string; status: string; ttl?: string; priority?: number }
+
+interface DomainState {
+  domainName: string;
+  accountLabel: string;
+  sharedAccount: boolean;
+  found?: boolean;
+  status: string | null;
+  trackingSubdomain: string | null;
+  records: DnsRecord[];
+  steps?: string[];
+  error?: string;
+}
 
 interface TrackingStatus {
   active: boolean;
@@ -51,6 +63,54 @@ export default function ResendPanel({
   const [checking, setChecking] = useState(false);
   const [setup, setSetup] = useState<SetupResult | null>(null);
   const [settingUp, setSettingUp] = useState(false);
+  const [domain, setDomain] = useState<DomainState | null>(null);
+  const [domainBusy, setDomainBusy] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Alta y verificación del dominio del cliente en la cuenta que paga sus
+  // envíos. Es el primer paso del onboarding: sin el dominio verificado ahí, ni
+  // el envío ni "Activar seguimiento" funcionan.
+  async function domainRequest(method: "GET" | "POST" | "PUT", busy: string) {
+    setDomainBusy(busy);
+    setCopied(false);
+    try {
+      const res = await fetch(`/api/empresas/${empresaId}/dominio`, {
+        method,
+        ...(method === "GET" ? {} : { headers: { "Content-Type": "application/json" }, body: "{}" }),
+      });
+      const data = await res.json();
+      setDomain(res.ok ? data : { ...data, records: [] });
+    } catch {
+      setDomain({
+        domainName: fromEmail,
+        accountLabel: "",
+        sharedAccount: true,
+        status: null,
+        trackingSubdomain: null,
+        records: [],
+        error: "No se pudo contactar el servidor.",
+      });
+    }
+    setDomainBusy("");
+    router.refresh();
+  }
+
+  async function addDomain() {
+    const dominio = fromEmail.split("@")[1] ?? "";
+    if (!confirm(`Se agregará el dominio "${dominio}" a la cuenta de Resend que paga los envíos de esta empresa. ¿Continuar?`)) return;
+    await domainRequest("POST", "alta");
+  }
+
+  // Los registros se copian como texto plano porque el destinatario real es
+  // quien administra el DNS del cliente, normalmente por correo o WhatsApp.
+  async function copyRecords() {
+    if (!domain?.records.length) return;
+    const text = domain.records
+      .map((r) => `${r.type}\t${r.name}\t${r.value}${r.priority !== undefined ? `\tprioridad ${r.priority}` : ""}`)
+      .join("\n");
+    await navigator.clipboard.writeText(`Registros DNS para ${domain.domainName}:\n\n${text}`);
+    setCopied(true);
+  }
 
   async function checkTracking() {
     setChecking(true);
@@ -134,6 +194,92 @@ export default function ResendPanel({
           <Label className="text-xs text-gray-500">Email del remitente</Label>
           <Input placeholder="hola@lenyes.cl" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} className="text-sm" />
         </div>
+      </div>
+
+      <div className="rounded-md border border-gray-200 p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs text-gray-600 flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-gray-400" />
+            Dominio de envío en la cuenta de Resend
+          </Label>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={!!domainBusy || !resendFromEmail} onClick={() => domainRequest("GET", "estado")}>
+              {domainBusy === "estado" ? "Consultando..." : "Ver estado"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={!!domainBusy || !resendFromEmail} onClick={addDomain}>
+              <Plus className="w-3 h-3 mr-1" />
+              {domainBusy === "alta" ? "Dando de alta..." : "Dar de alta"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={!!domainBusy || !resendFromEmail} onClick={() => domainRequest("PUT", "verificar")}>
+              <RefreshCw className="w-3 h-3 mr-1" />
+              {domainBusy === "verificar" ? "Verificando..." : "Verificar DNS"}
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-gray-400">
+          {resendFromEmail
+            ? "Da de alta el dominio del cliente en la cuenta que paga sus envíos, pásale los registros DNS y verifica cuando los haya publicado. Recién entonces puede enviar y medir aperturas."
+            : "Guarda primero el email del remitente: de ahí sale el dominio que hay que dar de alta."}
+        </p>
+
+        {domain && (
+          <div className="space-y-2">
+            {domain.error ? (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md p-2">{domain.error}</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5 text-xs">
+                  {domain.status === "verified" ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  ) : domain.found === false ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  ) : (
+                    <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  )}
+                  <span className="font-mono">{domain.domainName}</span>
+                  <span className="text-gray-400">·</span>
+                  <span className={domain.status === "verified" ? "text-emerald-700" : "text-amber-700"}>
+                    {domain.found === false ? "no está en la cuenta" : (domain.status ?? "sin estado")}
+                  </span>
+                  {domain.accountLabel && <span className="text-gray-400">· {domain.accountLabel}</span>}
+                </div>
+
+                {domain.steps?.map((s, i) => (
+                  <p key={i} className="text-[11px] text-blue-800 bg-blue-50 border border-blue-200 rounded-md p-2">{s}</p>
+                ))}
+
+                {domain.records.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold text-gray-600">Registros DNS para la zona del cliente</p>
+                      <Button size="sm" variant="outline" className="h-6 text-[11px]" onClick={copyRecords}>
+                        <Copy className="w-3 h-3 mr-1" />
+                        {copied ? "Copiado" : "Copiar todos"}
+                      </Button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px] font-mono">
+                        <tbody>
+                          {domain.records.map((r, i) => (
+                            <tr key={i} className="border-t border-gray-100">
+                              <td className="py-1 pr-2 text-gray-500 whitespace-nowrap">{r.type}</td>
+                              <td className="py-1 pr-2 break-all">{r.name}</td>
+                              <td className="py-1 pr-2 break-all text-gray-600">{r.value}</td>
+                              <td className={`py-1 whitespace-nowrap ${r.status === "verified" ? "text-emerald-600" : "text-amber-600"}`}>
+                                {r.status}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1">

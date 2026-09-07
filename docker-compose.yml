@@ -11,14 +11,36 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      # Remitente compartido: el que usan las empresas que todavía no tienen
+      # dominio propio dado de alta. Sin esta línea la variable puede estar en
+      # Dokploy y nunca llegar al contenedor — se cae al default de lib/sender.ts
+      # ("Grillo <no-reply@grillo.click>"), que además es el dominio que el
+      # script de arranque intenta configurar. Es también el dominio que
+      # diagnostica setup-resend-tracking.ts en cada deploy.
+      - RESEND_FROM=${RESEND_FROM}
+      # Destinatarios de los correos de operación (Envío completado /
+      # Estadísticas 24h) cuando la campaña no define notifyEmails.
+      # Default: hola@grillo.click.
+      - REPORT_FALLBACK_EMAILS=${REPORT_FALLBACK_EMAILS}
+      # Solo para el arranque de una cuenta Resend NUEVA: con valor "1", el
+      # script del entrypoint crea el webhook y escribe su signing secret en el
+      # log UNA sola vez, para copiarlo a SVIX_SECRET. Dejar vacío después: con
+      # el secreto ya guardado, el script solo diagnostica y confirma que
+      # SVIX_SECRET coincide con el del webhook.
+      - CREATE_RESEND_WEBHOOK=${CREATE_RESEND_WEBHOOK}
       # Signing secret del webhook de la cuenta Resend de Grillo. Sin esto en la
       # lista, la variable puede estar en Dokploy y NUNCA llegar al contenedor:
       # el webhook responde 400 y no se registra ninguna apertura ni clic de las
       # empresas que envían por la cuenta compartida. Las que tienen cuenta
       # propia no dependen de él (su secreto va cifrado en la base).
       - SVIX_SECRET=${SVIX_SECRET}
-      # Cifra las credenciales de Resend que cada cliente pega en la app.
-      # Si se pierde o se cambia, hay que volver a pegarlas todas.
+      # NO ROTAR AL CAMBIAR DE CUENTA RESEND. Cifra dos cosas, y la segunda es
+      # la que duele: (1) las credenciales Resend que cada cliente pega en la
+      # app —se vuelven a pegar y listo—, y (2) el token de cada link de baja,
+      # que es encrypt(sendLogId). Los correos YA ENVIADOS llevan ese token
+      # dentro; cambiar la clave deja sin efecto el link de baja de toda campaña
+      # que siga en la bandeja de alguien, que es justo lo que Gmail y Yahoo
+      # exigen. No hay migración: es base64 de 32 bytes y no se deriva de nada.
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       # Password del admin creado por prisma/setup.js. Si no se define, usa grillo2026.
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}

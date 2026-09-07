@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { senderAddress, domainFromSender } from "../lib/sender";
+import { BASE_URL } from "../lib/base-url";
 
 // Idempotent Resend configuration for open/click tracking.
 //
@@ -18,9 +19,13 @@ import { senderAddress, domainFromSender } from "../lib/sender";
 
 const LOG = "[setup-resend-tracking]";
 
+// La URL DEBE salir de lib/base-url.ts, la misma que usa la app para registrar
+// el endpoint y armar los links. Este script tenía su propio fallback (un
+// dominio viejo de otro cliente): si NEXTAUTH_URL falta o cambia, el script
+// buscaría —y con CREATE_RESEND_WEBHOOK crearía— el webhook en una URL distinta
+// de la que la app escucha, y ninguna apertura ni clic se registraría jamás.
 function webhookUrl(): string {
-  const base = process.env.NEXTAUTH_URL ?? "https://calemana.digitalsagencia.cl";
-  return `${base.replace(/\/$/, "")}/api/webhooks/resend`;
+  return `${BASE_URL}/api/webhooks/resend`;
 }
 
 const REQUIRED_EVENTS = ["email.opened", "email.clicked", "email.bounced"] as const;
