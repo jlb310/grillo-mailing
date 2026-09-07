@@ -45,7 +45,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       iconLinkUrl:  src.iconLinkUrl,
       preFooterImageUrl:  src.preFooterImageUrl,
       preFooterImageLink: src.preFooterImageLink,
-      useAlemanaFooter:  src.useAlemanaFooter,
+      useGrilloFooter:  src.useGrilloFooter,
       eventInfoButtons:  src.eventInfoButtons,
       notifyEmails: src.notifyEmails,
       status:       "DRAFT",

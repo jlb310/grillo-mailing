@@ -16,8 +16,8 @@ export function senderAddress(): string {
 }
 
 /**
- * Extract the sending domain from a From string like `"Clínica Alemana
- * <eventos@clinicaalemana.cl>"` or a bare `no-reply@grillo.click`.
+ * Extract the sending domain from a From string like `"Clínica Vitacura
+ * <eventos@clinicavitacura.cl>"` or a bare `no-reply@grillo.click`.
  * Returns null when there is no `@domain` to extract.
  */
 export function domainFromSender(from: string): string | null {

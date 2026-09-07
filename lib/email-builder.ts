@@ -81,7 +81,7 @@ export interface EmailBuilderFields {
   blocks?: EmailBlock[];
   footerText?: string;
   /** When true, prepend the Grillo corporate footer block above the standard footer. (Nombre del campo heredado.) */
-  useAlemanaFooter?: boolean;
+  useGrilloFooter?: boolean;
   /** When true, render date/location as round icon buttons (calendar + map pin) instead of the info box. */
   eventInfoButtons?: boolean;
   /** Free-text date shown next to a circular calendar icon (info-icons row). */
@@ -103,9 +103,8 @@ const DEFAULT_LOGO_URL = `${BASE_URL}/grillo-mark.png`;
 
 // ── Grillo corporate footer ─────────────────────────────────────────────────
 // Bloque verde oscuro (elementos blancos) sobre el footer estándar cuando
-// fields.useAlemanaFooter está activo (nombre del campo heredado; hoy renderiza
-// la marca Grillo). "cancelar tu suscripción" apunta al {{UNSUBSCRIBE_URL}}
-// por destinatario (no hay centro de preferencias separado).
+// fields.useGrilloFooter está activo. "cancelar tu suscripción" apunta al
+// {{UNSUBSCRIBE_URL}} por destinatario (no hay centro de preferencias separado).
 const EVENT_ICON_BASE = `${BASE_URL}/icons`;
 const GRILLO_FOOTER_BG = "#070d08";
 const GRILLO_LINKS = {
@@ -530,7 +529,7 @@ export function buildEmailHtml(fields: EmailBuilderFields): string {
 
         ${renderPreFooterImage(fields)}
 
-        ${fields.useAlemanaFooter === false ? "" : renderGrilloFooter()}
+        ${fields.useGrilloFooter === false ? "" : renderGrilloFooter()}
 
         <!-- Footer -->
         <tr>

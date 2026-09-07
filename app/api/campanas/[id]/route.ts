@@ -95,7 +95,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       iconLinkUrl: body.iconLinkUrl,
       preFooterImageUrl: body.preFooterImageUrl,
       preFooterImageLink: body.preFooterImageLink,
-      useAlemanaFooter: body.useAlemanaFooter ?? undefined,
+      useGrilloFooter: body.useGrilloFooter ?? undefined,
       eventInfoButtons: body.eventInfoButtons ?? undefined,
       status: body.status,
       scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : undefined,

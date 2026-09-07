@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       iconLinkUrl: body.iconLinkUrl,
       preFooterImageUrl: body.preFooterImageUrl,
       preFooterImageLink: body.preFooterImageLink,
-      useAlemanaFooter: body.useAlemanaFooter ?? undefined,
+      useGrilloFooter: body.useGrilloFooter ?? undefined,
       eventInfoButtons: body.eventInfoButtons ?? undefined,
     },
   });

@@ -67,7 +67,7 @@ export default function NuevaEmpresaPage() {
         <div className="space-y-1.5">
           <Label>Nombre *</Label>
           <Input
-            placeholder="Ej: Clínica Alemana"
+            placeholder="Ej: Clínica Vitacura"
             value={fields.name}
             onChange={set("name")}
           />
@@ -76,7 +76,7 @@ export default function NuevaEmpresaPage() {
         <div className="space-y-1.5">
           <Label>Slug *</Label>
           <Input
-            placeholder="Ej: clinica-alemana"
+            placeholder="Ej: clinica-vitacura"
             value={fields.slug}
             onChange={set("slug")}
           />

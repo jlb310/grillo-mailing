@@ -89,7 +89,7 @@ model Campaign {
   // Imagen fija justo antes del footer (debajo de productos/cuerpo), con link opcional.
   preFooterImageUrl  String?
   preFooterImageLink String?
-  useAlemanaFooter Boolean      @default(true)
+  useGrilloFooter Boolean      @default(true)
   eventInfoButtons Boolean      @default(false)
   notifyEmails  String[]
   status        CampaignStatus @default(DRAFT)

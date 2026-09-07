@@ -67,7 +67,7 @@ function EmailBuilderForm() {
 
   // Footer
   const [footerText, setFooterText] = useState("Grillo Mailing — correo.grillo.click");
-  const [useAlemanaFooter, setUseAlemanaFooter] = useState(true);
+  const [useGrilloFooter, setUseGrilloFooter] = useState(true);
   const preFooterImageFileRef = useRef<HTMLInputElement>(null);
   const [uploadingPreFooterImage, setUploadingPreFooterImage] = useState(false);
   const [preFooterImageUrl, setPreFooterImageUrl] = useState("");
@@ -93,7 +93,7 @@ function EmailBuilderForm() {
       setIconDate(c.iconDate ?? "");
       setIconLinkText(c.iconLinkText ?? "");
       setIconLinkUrl(c.iconLinkUrl ?? "");
-      setUseAlemanaFooter(c.useAlemanaFooter ?? true);
+      setUseGrilloFooter(c.useGrilloFooter ?? true);
       setProgramaUrl(c.programaUrl ?? "");
       setEmailTitle(c.emailTitle ?? "");
       setEmailSubtitle(c.emailSubtitle ?? "");
@@ -116,9 +116,9 @@ function EmailBuilderForm() {
     logoUrl, logoAlt, logoHeight, logoAlign: "center", headerColor,
     emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
     iconDate, iconLinkText, iconLinkUrl,
-    emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials,
+    emailBody, ctaButtons, products, footerText, useGrilloFooter, socials,
     preFooterImageUrl, preFooterImageLink,
-  }), [logoUrl, logoAlt, logoHeight, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials, preFooterImageUrl, preFooterImageLink]);
+  }), [logoUrl, logoAlt, logoHeight, headerColor, emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons, iconDate, iconLinkText, iconLinkUrl, emailBody, ctaButtons, products, footerText, useGrilloFooter, socials, preFooterImageUrl, preFooterImageLink]);
 
   const previewHtml = useMemo(() => buildEmailHtml(builderFields), [builderFields]);
 
@@ -243,7 +243,7 @@ function EmailBuilderForm() {
       logoUrl, logoAlt, logoHeight, logoAlign: "center", logoRightUrl: "", logoRightHeight: "", logoRight2Url: "", logoRight2Height: "", headerColor,
       emailTitle, emailSubtitle, emailDate, emailLocation, eventInfoButtons,
       iconDate, iconLinkText, iconLinkUrl,
-      emailBody, ctaButtons, products, footerText, useAlemanaFooter, socials, programaUrl,
+      emailBody, ctaButtons, products, footerText, useGrilloFooter, socials, programaUrl,
       preFooterImageUrl, preFooterImageLink,
     };
     try {
@@ -662,7 +662,7 @@ function EmailBuilderForm() {
               <div className="space-y-2 mt-6 pt-4 border-t border-gray-100">
                 <Label className="text-xs text-gray-500 uppercase tracking-wide">Footer corporativo</Label>
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="checkbox" checked={useAlemanaFooter} onChange={(e) => setUseAlemanaFooter(e.target.checked)} className="accent-[#207029]" />
+                  <input type="checkbox" checked={useGrilloFooter} onChange={(e) => setUseGrilloFooter(e.target.checked)} className="accent-[#207029]" />
                   Agregar footer de Grillo (logo y link de baja) sobre el footer actual
                 </label>
               </div>
